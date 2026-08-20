@@ -232,7 +232,6 @@ export function ItemRow({
               }
             }}
           />
-          <div className="input-label">item name</div>
         </div>
 
         {/* Row Operations */}
@@ -275,10 +274,13 @@ export function ItemRow({
         </div>
       </div>
 
-      {/* Numeric Inputs Grid (Fast Entry Navigation) */}
+      {/* Numeric Inputs Grid (Labels placed cleanly ON TOP) */}
       <div className={`item-numeric-grid ${!isVatBill ? "non-vat-grid" : ""}`}>
         {/* Total Qty - HIGHLIGHTED */}
         <div className="input-block qty-block">
+          <div className="input-label" style={{ color: "var(--accent-amber)", fontWeight: 600 }}>
+            Qty
+          </div>
           <input
             ref={qtyInputRef}
             className="input qty-highlight-input"
@@ -303,15 +305,15 @@ export function ItemRow({
               fontWeight: 600,
             }}
           />
-          <div className="input-label" style={{ color: "var(--accent-amber)", fontWeight: 600 }}>
-            qty
-          </div>
         </div>
 
         {/* 13% VAT Bill Mode */}
         {isVatBill ? (
           <>
             <div className="input-block price-block">
+              <div className="input-label" style={{ color: "var(--accent-emerald)", fontWeight: 600 }}>
+                Price (No VAT)
+              </div>
               <div className="input-with-symbol">
                 <span
                   className="input-symbol"
@@ -345,13 +347,11 @@ export function ItemRow({
                   title="Unit price without VAT (e.g. 100)"
                 />
               </div>
-              <div className="input-label" style={{ color: "var(--accent-emerald)", fontWeight: 600 }}>
-                Price (No VAT)
-              </div>
             </div>
 
             {/* Unit With VAT (13%) - NON-HIGHLIGHTED */}
             <div className="input-block price-block">
+              <div className="input-label">Unit (13% VAT)</div>
               <div className="input-with-symbol">
                 <span className="input-symbol">Rs</span>
                 <input
@@ -367,12 +367,14 @@ export function ItemRow({
                   title="Unit price with 13% VAT (e.g. 113)"
                 />
               </div>
-              <div className="input-label">Unit (13% VAT)</div>
             </div>
           </>
         ) : (
           /* Non-VAT Bill Mode: Direct Unit Price (HIGHLIGHTED) */
           <div className="input-block price-block">
+            <div className="input-label" style={{ color: "var(--accent-emerald)", fontWeight: 600 }}>
+              Price / Unit
+            </div>
             <div className="input-with-symbol">
               <span
                 className="input-symbol"
@@ -406,14 +408,12 @@ export function ItemRow({
                 title="Direct Unit Price (No VAT)"
               />
             </div>
-            <div className="input-label" style={{ color: "var(--accent-emerald)", fontWeight: 600 }}>
-              Price / Unit
-            </div>
           </div>
         )}
 
         {/* Total Actual Price - NON-HIGHLIGHTED */}
         <div className="input-block price-block total-price-block">
+          <div className="input-label">Total Price</div>
           <div className="input-with-symbol">
             <span className="input-symbol">Rs</span>
             <input
@@ -429,7 +429,6 @@ export function ItemRow({
               title="Total actual price for this item (Unit price × Qty)"
             />
           </div>
-          <div className="input-label">Total Price</div>
         </div>
       </div>
 
