@@ -129,6 +129,90 @@ function formatShareText(item: BillItem, friendId: string): string {
   return `x${intNum}/${intDen}`;
 }
 
+function downloadJSON(data: unknown, filename: string) {
+  const jsonStr = JSON.stringify(data, null, 2);
+  const blob = new Blob([jsonStr], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+function sanitizeFriends(raw: unknown): Friend[] {
+  if (!Array.isArray(raw)) return [];
+  return raw.map((f, idx) => ({
+    id: typeof f?.id === "string" && f.id ? f.id : uid(),
+    name: typeof f?.name === "string" ? f.name : `Friend ${idx + 1}`,
+    colorIdx:
+      typeof f?.colorIdx === "number" ? f.colorIdx : idx % PERSON_COLORS.length,
+  }));
+}
+
+function sanitizeItems(raw: unknown): BillItem[] {
+  if (!Array.isArray(raw)) return [];
+  return raw.map((i) => ({
+    id: typeof i?.id === "string" && i.id ? i.id : uid(),
+    name: typeof i?.name === "string" ? i.name : "",
+    price:
+      typeof i?.price === "number" && !isNaN(i.price)
+        ? Math.max(0, i.price)
+        : 0,
+    totalQty:
+      typeof i?.totalQty === "number" && !isNaN(i.totalQty) && i.totalQty > 0
+        ? i.totalQty
+        : 1,
+    shares: Array.isArray(i?.shares)
+      ? i.shares
+          .map((s: { friendId?: string; qty?: number }) => ({
+            friendId: typeof s?.friendId === "string" ? s.friendId : "",
+            qty: typeof s?.qty === "number" && !isNaN(s.qty) ? s.qty : 1,
+          }))
+          .filter((s: ItemShare) => Boolean(s.friendId))
+      : [],
+  }));
+}
+
+function sanitizeFee(
+  f: unknown,
+  defaultType: "flat" | "percent" = "flat",
+): FeeConfig {
+  if (!f || typeof f !== "object") return { type: defaultType, value: 0 };
+  const fee = f as { type?: string; value?: number };
+  return {
+    type: fee.type === "percent" ? "percent" : "flat",
+    value:
+      typeof fee.value === "number" && !isNaN(fee.value)
+        ? Math.max(0, fee.value)
+        : 0,
+  };
+}
+
+function sanitizeSavedBills(list: unknown): SavedBill[] {
+  if (!Array.isArray(list)) return [];
+  return list.map((b) => ({
+    id: typeof b?.id === "string" && b.id ? b.id : uid(),
+    title: typeof b?.title === "string" ? b.title : "Untitled Bill",
+    date:
+      typeof b?.date === "string"
+        ? b.date
+        : new Date().toLocaleDateString("en-IN"),
+    friends: sanitizeFriends(b?.friends),
+    items: sanitizeItems(b?.items),
+    flatFee: sanitizeFee(b?.flatFee, "flat"),
+    discount: sanitizeFee(b?.discount, "flat"),
+    tax: sanitizeFee(b?.tax, "percent"),
+    tip: sanitizeFee(b?.tip, "percent"),
+    grandTotal:
+      typeof b?.grandTotal === "number" && !isNaN(b.grandTotal)
+        ? b.grandTotal
+        : 0,
+  }));
+}
+
 // ─── Avatar ───────────────────────────────────────────────────────────────────
 
 function AvatarCircle({
@@ -1394,6 +1478,16 @@ export default function BillSplitPage() {
   const [showHistoryModal, setShowHistoryModal] = useState(false);
   const [saveStatus, setSaveStatus] = useState<"saved" | "saving">("saved");
 
+  // JSON Export / Import state
+  const [showJsonModal, setShowJsonModal] = useState(false);
+  const [jsonTab, setJsonTab] = useState<"export" | "import">("export");
+  const [jsonPasteText, setJsonPasteText] = useState("");
+  const [importStatusMessage, setImportStatusMessage] = useState<{
+    type: "success" | "error";
+    text: string;
+  } | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   // Export
   const [exporting, setExporting] = useState(false);
   const exportRef = useRef<HTMLDivElement>(null);
@@ -1575,6 +1669,243 @@ export default function BillSplitPage() {
       setDiscount({ type: "flat", value: 0 });
       setTax({ type: "percent", value: 0 });
       setTip({ type: "percent", value: 0 });
+    }
+  }
+
+  // ─── JSON Export & Import Handlers ───
+  function loadBillData(data: {
+    billTitle?: string;
+    title?: string;
+    friends?: unknown;
+    items?: unknown;
+    flatFee?: unknown;
+    discount?: unknown;
+    tax?: unknown;
+    tip?: unknown;
+  }) {
+    if (data.billTitle !== undefined) setBillTitle(String(data.billTitle));
+    else if (data.title !== undefined) setBillTitle(String(data.title));
+
+    if (Array.isArray(data.friends)) {
+      setFriends(sanitizeFriends(data.friends));
+    }
+    if (Array.isArray(data.items)) {
+      const sItems = sanitizeItems(data.items);
+      setItems(
+        sItems.length > 0
+          ? sItems
+          : [{ id: uid(), name: "", price: 0, totalQty: 1, shares: [] }],
+      );
+    }
+    if (data.flatFee) setFlatFee(sanitizeFee(data.flatFee, "flat"));
+    if (data.discount) setDiscount(sanitizeFee(data.discount, "flat"));
+    if (data.tax) setTax(sanitizeFee(data.tax, "percent"));
+    if (data.tip) setTip(sanitizeFee(data.tip, "percent"));
+  }
+
+  function exportCurrentBillJSON() {
+    const payload = {
+      version: 1,
+      type: "billsplit_current_bill",
+      exportedAt: new Date().toISOString(),
+      bill: {
+        title: billTitle.trim() || "Untitled Bill",
+        friends,
+        items,
+        flatFee,
+        discount,
+        tax,
+        tip,
+        grandTotal,
+      },
+    };
+    const safeTitle = (billTitle.trim() || "Bill").replace(
+      /[^a-zA-Z0-9_-]/g,
+      "_",
+    );
+    downloadJSON(payload, `${safeTitle}_current_bill.json`);
+  }
+
+  function exportFullBackupJSON() {
+    const payload = {
+      version: 1,
+      type: "billsplit_full_backup",
+      exportedAt: new Date().toISOString(),
+      currentBill: {
+        title: billTitle.trim() || "Untitled Bill",
+        friends,
+        items,
+        flatFee,
+        discount,
+        tax,
+        tip,
+        grandTotal,
+      },
+      savedBills,
+    };
+    const dateStr = new Date().toLocaleDateString("en-IN").replace(/\//g, "-");
+    downloadJSON(payload, `BillSplit_Full_Backup_${dateStr}.json`);
+  }
+
+  function exportSavedBillJSON(bill: SavedBill) {
+    const payload = {
+      version: 1,
+      type: "billsplit_saved_bill",
+      exportedAt: new Date().toISOString(),
+      bill,
+    };
+    const safeTitle = (bill.title.trim() || "Bill").replace(
+      /[^a-zA-Z0-9_-]/g,
+      "_",
+    );
+    downloadJSON(payload, `${safeTitle}_bill.json`);
+  }
+
+  function exportAllSavedBillsJSON() {
+    const payload = {
+      version: 1,
+      type: "billsplit_saved_history",
+      exportedAt: new Date().toISOString(),
+      savedBills,
+    };
+    const dateStr = new Date().toLocaleDateString("en-IN").replace(/\//g, "-");
+    downloadJSON(payload, `BillSplit_Saved_Bills_${dateStr}.json`);
+  }
+
+  function processImportedJSON(parsed: any): boolean {
+    if (!parsed || typeof parsed !== "object") {
+      setImportStatusMessage({
+        type: "error",
+        text: "Invalid JSON structure.",
+      });
+      return false;
+    }
+
+    // Case 1: Full Backup
+    if (
+      parsed.type === "billsplit_full_backup" ||
+      (parsed.savedBills &&
+        (parsed.currentBill || parsed.currentDraft || parsed.bill))
+    ) {
+      const billData =
+        parsed.currentBill || parsed.currentDraft || parsed.bill;
+      if (billData) loadBillData(billData);
+      if (Array.isArray(parsed.savedBills)) {
+        const importedSaved = sanitizeSavedBills(parsed.savedBills);
+        setSavedBills((prev) => {
+          const existingIds = new Set(prev.map((b) => b.id));
+          const newOnes = importedSaved.filter((b) => !existingIds.has(b.id));
+          const merged = [...newOnes, ...prev];
+          localStorage.setItem(
+            "billsplit_saved_history",
+            JSON.stringify(merged),
+          );
+          return merged;
+        });
+      }
+      setImportStatusMessage({
+        type: "success",
+        text: `Full backup restored! Loaded bill and synced ${parsed.savedBills?.length || 0} saved bills.`,
+      });
+      return true;
+    }
+
+    // Case 2: Array of Saved Bills
+    if (
+      Array.isArray(parsed) ||
+      (parsed.type === "billsplit_saved_history" &&
+        Array.isArray(parsed.savedBills))
+    ) {
+      const list = Array.isArray(parsed) ? parsed : parsed.savedBills;
+      const importedSaved = sanitizeSavedBills(list);
+      if (importedSaved.length > 0) {
+        setSavedBills((prev) => {
+          const existingIds = new Set(prev.map((b) => b.id));
+          const newOnes = importedSaved.filter((b) => !existingIds.has(b.id));
+          const merged = [...newOnes, ...prev];
+          localStorage.setItem(
+            "billsplit_saved_history",
+            JSON.stringify(merged),
+          );
+          return merged;
+        });
+        setImportStatusMessage({
+          type: "success",
+          text: `Successfully imported ${importedSaved.length} saved bills into history!`,
+        });
+        return true;
+      }
+    }
+
+    // Case 3: Single Bill (either wrapped or unwrapped)
+    const singleBill = parsed.bill || parsed;
+    if (
+      singleBill &&
+      (Array.isArray(singleBill.friends) ||
+        Array.isArray(singleBill.items) ||
+        singleBill.title ||
+        singleBill.billTitle)
+    ) {
+      loadBillData(singleBill);
+      const title = singleBill.title || singleBill.billTitle || "Bill";
+      setImportStatusMessage({
+        type: "success",
+        text: `Successfully loaded bill: "${title}" with ${singleBill.friends?.length || 0} friends and ${singleBill.items?.length || 0} items!`,
+      });
+      return true;
+    }
+
+    setImportStatusMessage({
+      type: "error",
+      text: "Could not recognize BillSplit data in this JSON.",
+    });
+    return false;
+  }
+
+  function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const content = event.target?.result as string;
+        const parsed = JSON.parse(content);
+        processImportedJSON(parsed);
+      } catch (err) {
+        setImportStatusMessage({
+          type: "error",
+          text:
+            "Failed to parse JSON file: " +
+            (err instanceof Error ? err.message : "Invalid JSON"),
+        });
+      } finally {
+        if (fileInputRef.current) fileInputRef.current.value = "";
+      }
+    };
+    reader.readAsText(file);
+  }
+
+  function handlePasteImport() {
+    if (!jsonPasteText.trim()) {
+      setImportStatusMessage({
+        type: "error",
+        text: "Please paste some JSON text first.",
+      });
+      return;
+    }
+    try {
+      const parsed = JSON.parse(jsonPasteText);
+      const success = processImportedJSON(parsed);
+      if (success) {
+        setJsonPasteText("");
+      }
+    } catch (err) {
+      setImportStatusMessage({
+        type: "error",
+        text:
+          "Invalid JSON format: " +
+          (err instanceof Error ? err.message : "Syntax error"),
+      });
     }
   }
 
@@ -1875,6 +2206,27 @@ export default function BillSplitPage() {
               <path d="M3 21v-5h5" />
             </svg>
             New Bill
+          </button>
+          <button
+            className="btn btn-ghost"
+            onClick={() => {
+              setImportStatusMessage(null);
+              setShowJsonModal(true);
+            }}
+            title="Export or Import bill data as JSON"
+          >
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+            >
+              <polyline points="16 18 22 12 16 6" />
+              <polyline points="8 6 2 12 8 18" />
+            </svg>
+            JSON
           </button>
           <button
             className="btn btn-ghost"
@@ -2347,6 +2699,17 @@ export default function BillSplitPage() {
           <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
             <button
               className="btn btn-ghost"
+              onClick={() => {
+                setImportStatusMessage(null);
+                setShowJsonModal(true);
+              }}
+              style={{ flex: 1, justifyContent: "center" }}
+              title="Export or Import JSON"
+            >
+              {`{ }`} JSON
+            </button>
+            <button
+              className="btn btn-ghost"
               onClick={handleExportImage}
               disabled={exporting || friends.length === 0}
               style={{ flex: 1, justifyContent: "center" }}
@@ -2378,18 +2741,45 @@ export default function BillSplitPage() {
                 justifyContent: "space-between",
                 alignItems: "center",
                 marginBottom: 18,
+                flexWrap: "wrap",
+                gap: 8,
               }}
             >
               <h2 style={{ fontSize: 18, fontWeight: 700 }}>
                 📜 Saved Bills History
               </h2>
-              <button
-                className="btn btn-ghost"
-                onClick={() => setShowHistoryModal(false)}
-                style={{ padding: "4px 8px" }}
-              >
-                ✕
-              </button>
+              <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                {savedBills.length > 0 && (
+                  <button
+                    className="btn btn-ghost"
+                    onClick={exportAllSavedBillsJSON}
+                    style={{ padding: "4px 10px", fontSize: 12 }}
+                    title="Export all saved bills as JSON"
+                  >
+                    Export All JSON
+                  </button>
+                )}
+                <button
+                  className="btn btn-ghost"
+                  onClick={() => {
+                    setShowHistoryModal(false);
+                    setJsonTab("import");
+                    setImportStatusMessage(null);
+                    setShowJsonModal(true);
+                  }}
+                  style={{ padding: "4px 10px", fontSize: 12 }}
+                  title="Import bills from JSON"
+                >
+                  Import JSON
+                </button>
+                <button
+                  className="btn btn-ghost"
+                  onClick={() => setShowHistoryModal(false)}
+                  style={{ padding: "4px 8px" }}
+                >
+                  ✕
+                </button>
+              </div>
             </div>
 
             {savedBills.length === 0 ? (
@@ -2456,7 +2846,27 @@ export default function BillSplitPage() {
                         Total: {formatCurrency(bill.grandTotal)}
                       </div>
                     </div>
-                    <div style={{ display: "flex", gap: 6 }}>
+                    <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                      <button
+                        className="btn btn-ghost"
+                        onClick={() => exportSavedBillJSON(bill)}
+                        title="Export this bill as JSON"
+                        style={{ padding: "6px 10px", fontSize: 12 }}
+                      >
+                        <svg
+                          width="12"
+                          height="12"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                        >
+                          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                          <polyline points="7 10 12 15 17 10" />
+                          <line x1="12" y1="15" x2="12" y2="3" />
+                        </svg>
+                        JSON
+                      </button>
                       <button
                         className="btn btn-primary"
                         onClick={() => loadSavedBill(bill)}
@@ -2484,6 +2894,519 @@ export default function BillSplitPage() {
                     </div>
                   </div>
                 ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ─── JSON Export / Import Modal ─── */}
+      {showJsonModal && (
+        <div
+          className="modal-backdrop"
+          onClick={() => {
+            setShowJsonModal(false);
+            setImportStatusMessage(null);
+          }}
+        >
+          <div
+            className="modal-content"
+            style={{ maxWidth: 580 }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                marginBottom: 16,
+              }}
+            >
+              <div>
+                <h2
+                  style={{
+                    fontSize: 18,
+                    fontWeight: 700,
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 8,
+                  }}
+                >
+                  <span>📦</span> Export &amp; Import JSON
+                </h2>
+                <div
+                  style={{
+                    fontSize: 12,
+                    color: "var(--text-muted)",
+                    marginTop: 2,
+                  }}
+                >
+                  Transfer your bills, friends, items, and history between devices
+                </div>
+              </div>
+              <button
+                className="btn btn-ghost"
+                onClick={() => {
+                  setShowJsonModal(false);
+                  setImportStatusMessage(null);
+                }}
+                style={{ padding: "4px 8px" }}
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Tab navigation */}
+            <div
+              style={{
+                display: "flex",
+                background: "var(--bg-secondary)",
+                borderRadius: 10,
+                padding: 4,
+                marginBottom: 18,
+                border: "1px solid var(--border)",
+              }}
+            >
+              <button
+                type="button"
+                className={`btn ${jsonTab === "export" ? "btn-primary" : "btn-ghost"}`}
+                style={{
+                  flex: 1,
+                  justifyContent: "center",
+                  padding: "8px 12px",
+                  fontSize: 13,
+                  borderRadius: 8,
+                  border: "none",
+                }}
+                onClick={() => {
+                  setJsonTab("export");
+                  setImportStatusMessage(null);
+                }}
+              >
+                📤 Export JSON
+              </button>
+              <button
+                type="button"
+                className={`btn ${jsonTab === "import" ? "btn-primary" : "btn-ghost"}`}
+                style={{
+                  flex: 1,
+                  justifyContent: "center",
+                  padding: "8px 12px",
+                  fontSize: 13,
+                  borderRadius: 8,
+                  border: "none",
+                }}
+                onClick={() => {
+                  setJsonTab("import");
+                  setImportStatusMessage(null);
+                }}
+              >
+                📥 Import JSON
+              </button>
+            </div>
+
+            {/* Notification banner */}
+            {importStatusMessage && (
+              <div
+                style={{
+                  marginBottom: 16,
+                  padding: "10px 14px",
+                  borderRadius: 8,
+                  fontSize: 13,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                  background:
+                    importStatusMessage.type === "success"
+                      ? "rgba(16, 185, 129, 0.15)"
+                      : "rgba(244, 63, 94, 0.15)",
+                  border: `1px solid ${
+                    importStatusMessage.type === "success"
+                      ? "rgba(16, 185, 129, 0.3)"
+                      : "rgba(244, 63, 94, 0.3)"
+                  }`,
+                  color:
+                    importStatusMessage.type === "success"
+                      ? "var(--accent-emerald)"
+                      : "var(--accent-rose)",
+                }}
+              >
+                <span>{importStatusMessage.type === "success" ? "✓" : "⚠"}</span>
+                <span style={{ flex: 1 }}>{importStatusMessage.text}</span>
+                <button
+                  type="button"
+                  onClick={() => setImportStatusMessage(null)}
+                  style={{
+                    background: "none",
+                    border: "none",
+                    color: "inherit",
+                    cursor: "pointer",
+                    padding: 2,
+                  }}
+                >
+                  ✕
+                </button>
+              </div>
+            )}
+
+            {/* EXPORT TAB */}
+            {jsonTab === "export" && (
+              <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                {/* Current Bill Export Card */}
+                <div
+                  style={{
+                    background: "var(--bg-secondary)",
+                    border: "1px solid var(--border)",
+                    borderRadius: 12,
+                    padding: "16px",
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    gap: 12,
+                  }}
+                >
+                  <div>
+                    <div
+                      style={{
+                        fontWeight: 600,
+                        fontSize: 14,
+                        color: "var(--text-primary)",
+                      }}
+                    >
+                      Current Bill JSON
+                    </div>
+                    <div
+                      style={{
+                        fontSize: 12,
+                        color: "var(--text-muted)",
+                        marginTop: 2,
+                      }}
+                    >
+                      &ldquo;{billTitle || "Untitled Bill"}&rdquo; •{" "}
+                      {friends.length} friends • {items.length} items
+                    </div>
+                    <div
+                      style={{
+                        fontSize: 11.5,
+                        color: "var(--text-secondary)",
+                        marginTop: 4,
+                      }}
+                    >
+                      Exports current bill details, friend shares, quantities,
+                      VAT, and fees.
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    className="btn btn-primary"
+                    onClick={exportCurrentBillJSON}
+                    style={{
+                      padding: "8px 14px",
+                      fontSize: 13,
+                      flexShrink: 0,
+                    }}
+                  >
+                    <svg
+                      width="14"
+                      height="14"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                    >
+                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                      <polyline points="7 10 12 15 17 10" />
+                      <line x1="12" y1="15" x2="12" y2="3" />
+                    </svg>
+                    Export Current
+                  </button>
+                </div>
+
+                {/* Full Backup Card */}
+                <div
+                  style={{
+                    background: "var(--bg-secondary)",
+                    border: "1px solid var(--border)",
+                    borderRadius: 12,
+                    padding: "16px",
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    gap: 12,
+                  }}
+                >
+                  <div>
+                    <div
+                      style={{
+                        fontWeight: 600,
+                        fontSize: 14,
+                        color: "var(--text-primary)",
+                      }}
+                    >
+                      Full Backup JSON
+                    </div>
+                    <div
+                      style={{
+                        fontSize: 12,
+                        color: "var(--text-muted)",
+                        marginTop: 2,
+                      }}
+                    >
+                      Current draft + all {savedBills.length} saved history bills
+                    </div>
+                    <div
+                      style={{
+                        fontSize: 11.5,
+                        color: "var(--text-secondary)",
+                        marginTop: 4,
+                      }}
+                    >
+                      Complete snapshot for backup or moving to another browser /
+                      device.
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    className="btn btn-amber"
+                    onClick={exportFullBackupJSON}
+                    style={{
+                      padding: "8px 14px",
+                      fontSize: 13,
+                      flexShrink: 0,
+                    }}
+                  >
+                    <svg
+                      width="14"
+                      height="14"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                    >
+                      <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" />
+                      <polyline points="17 21 17 13 7 13 7 21" />
+                      <polyline points="7 3 7 8 15 8" />
+                    </svg>
+                    Export All Backup
+                  </button>
+                </div>
+
+                {/* Saved Bills History Export Card */}
+                {savedBills.length > 0 && (
+                  <div
+                    style={{
+                      background: "var(--bg-secondary)",
+                      border: "1px solid var(--border)",
+                      borderRadius: 12,
+                      padding: "16px",
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      gap: 12,
+                    }}
+                  >
+                    <div>
+                      <div
+                        style={{
+                          fontWeight: 600,
+                          fontSize: 14,
+                          color: "var(--text-primary)",
+                        }}
+                      >
+                        Saved Bills Archive
+                      </div>
+                      <div
+                        style={{
+                          fontSize: 12,
+                          color: "var(--text-muted)",
+                          marginTop: 2,
+                        }}
+                      >
+                        {savedBills.length} saved{" "}
+                        {savedBills.length === 1 ? "bill" : "bills"} in history
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      className="btn btn-ghost"
+                      onClick={exportAllSavedBillsJSON}
+                      style={{
+                        padding: "8px 14px",
+                        fontSize: 13,
+                        flexShrink: 0,
+                      }}
+                    >
+                      Export History Only
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* IMPORT TAB */}
+            {jsonTab === "import" && (
+              <div
+                style={{ display: "flex", flexDirection: "column", gap: 14 }}
+              >
+                {/* File picker dropzone */}
+                <div
+                  style={{
+                    background: "var(--bg-secondary)",
+                    border: "2px dashed var(--border)",
+                    borderRadius: 12,
+                    padding: "24px 16px",
+                    textAlign: "center",
+                    cursor: "pointer",
+                    transition: "all 0.2s ease",
+                  }}
+                  onClick={() => fileInputRef.current?.click()}
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                    e.currentTarget.style.borderColor = "var(--accent-teal)";
+                  }}
+                  onDragLeave={(e) => {
+                    e.currentTarget.style.borderColor = "var(--border)";
+                  }}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    e.currentTarget.style.borderColor = "var(--border)";
+                    const file = e.dataTransfer.files?.[0];
+                    if (file) {
+                      const reader = new FileReader();
+                      reader.onload = (event) => {
+                        try {
+                          const parsed = JSON.parse(
+                            event.target?.result as string,
+                          );
+                          processImportedJSON(parsed);
+                        } catch (err) {
+                          setImportStatusMessage({
+                            type: "error",
+                            text:
+                              "Failed to parse dropped JSON: " +
+                              (err instanceof Error
+                                ? err.message
+                                : "Invalid JSON"),
+                          });
+                        }
+                      };
+                      reader.readAsText(file);
+                    }
+                  }}
+                >
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    accept=".json,application/json"
+                    style={{ display: "none" }}
+                    onChange={handleFileSelect}
+                  />
+                  <div style={{ fontSize: 32, marginBottom: 6 }}>📂</div>
+                  <div
+                    style={{
+                      fontWeight: 600,
+                      fontSize: 14,
+                      color: "var(--text-primary)",
+                    }}
+                  >
+                    Choose a JSON file or drag &amp; drop
+                  </div>
+                  <div
+                    style={{
+                      fontSize: 12,
+                      color: "var(--text-muted)",
+                      marginTop: 4,
+                    }}
+                  >
+                    Supports single bills, saved history archives, and full
+                    backup files
+                  </div>
+                  <button
+                    type="button"
+                    className="btn btn-primary"
+                    style={{
+                      marginTop: 12,
+                      padding: "6px 16px",
+                      fontSize: 13,
+                    }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      fileInputRef.current?.click();
+                    }}
+                  >
+                    Select .json File
+                  </button>
+                </div>
+
+                {/* Divider */}
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 10,
+                    margin: "2px 0",
+                  }}
+                >
+                  <div
+                    style={{
+                      flex: 1,
+                      height: 1,
+                      background: "var(--border)",
+                    }}
+                  />
+                  <span
+                    style={{
+                      fontSize: 11,
+                      color: "var(--text-muted)",
+                      textTransform: "uppercase",
+                      letterSpacing: "0.05em",
+                    }}
+                  >
+                    or paste json text
+                  </span>
+                  <div
+                    style={{
+                      flex: 1,
+                      height: 1,
+                      background: "var(--border)",
+                    }}
+                  />
+                </div>
+
+                {/* Textarea paste import */}
+                <div>
+                  <textarea
+                    className="input"
+                    rows={4}
+                    value={jsonPasteText}
+                    onChange={(e) => setJsonPasteText(e.target.value)}
+                    placeholder='Paste JSON here, e.g. {"bill": { "title": "Dinner", "friends": [...], "items": [...] }}'
+                    style={{
+                      fontFamily: "monospace",
+                      fontSize: 12,
+                      resize: "vertical",
+                      width: "100%",
+                      borderRadius: 8,
+                      padding: "8px 10px",
+                    }}
+                  />
+                  <button
+                    type="button"
+                    className="btn btn-ghost"
+                    onClick={handlePasteImport}
+                    disabled={!jsonPasteText.trim()}
+                    style={{
+                      marginTop: 8,
+                      width: "100%",
+                      justifyContent: "center",
+                      fontSize: 13,
+                      padding: "8px 12px",
+                    }}
+                  >
+                    📥 Import from Pasted JSON
+                  </button>
+                </div>
               </div>
             )}
           </div>
