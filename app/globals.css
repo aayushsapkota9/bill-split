@@ -233,7 +233,17 @@ body {
   text-align: center;
 }
 .qty-input:focus { border-color: var(--accent-teal); }
-.qty-input::-webkit-inner-spin-button { opacity: 0.6; }
+.qty-input::-webkit-inner-spin-button,
+.qty-input::-webkit-outer-spin-button,
+.input::-webkit-inner-spin-button,
+.input::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.input[type="number"],
+.qty-input[type="number"] {
+  -moz-appearance: textfield;
+}
 
 /* Totals */
 .total-row {

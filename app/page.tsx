@@ -286,8 +286,8 @@ function ItemRow({
   }
 
   const assignedTotal = item.shares.reduce((s, sh) => s + sh.qty, 0);
-  const diff = Math.abs(assignedTotal - item.totalQty);
-  const mismatch = diff > 0.001 && item.totalQty > 0 && item.shares.length > 0;
+  const diff = Math.abs(assignedTotal - (item.totalQty || 0));
+  const mismatch = diff > 0.05 && item.totalQty > 0 && item.shares.length > 0;
 
   function toggleFriend(fid: string) {
     const existing = item.shares.find((s) => s.friendId === fid);
@@ -295,26 +295,48 @@ function ItemRow({
     if (existing) {
       newShares = item.shares.filter((s) => s.friendId !== fid);
     } else {
-      newShares = [...item.shares, { friendId: fid, qty: 1 }];
+      const defaultQty =
+        showFractions && item.totalQty > 0
+          ? Math.round((item.totalQty / (item.shares.length + 1)) * 100) / 100
+          : 1;
+      newShares = [...item.shares, { friendId: fid, qty: defaultQty }];
     }
     onChange({ ...item, shares: newShares });
   }
 
   function updateQty(fid: string, val: string) {
-    const num = parseFloat(val) || 0;
-    onChange({
-      ...item,
-      shares: item.shares.map((s) =>
-        s.friendId === fid ? { ...s, qty: num } : s,
-      ),
-    });
+    if (val === "") {
+      onChange({
+        ...item,
+        shares: item.shares.map((s) =>
+          s.friendId === fid ? { ...s, qty: 0 } : s,
+        ),
+      });
+      return;
+    }
+    const num = parseFloat(val);
+    if (!isNaN(num)) {
+      onChange({
+        ...item,
+        shares: item.shares.map((s) =>
+          s.friendId === fid ? { ...s, qty: num } : s,
+        ),
+      });
+    }
   }
 
   function updateField(field: "name" | "totalQty", val: string) {
     if (field === "name") {
       onChange({ ...item, name: val });
     } else {
-      onChange({ ...item, totalQty: parseFloat(val) || 0 });
+      if (val === "") {
+        onChange({ ...item, totalQty: 0 });
+        return;
+      }
+      const newQty = parseFloat(val);
+      if (!isNaN(newQty)) {
+        onChange({ ...item, totalQty: newQty });
+      }
     }
   }
 
@@ -401,11 +423,12 @@ function ItemRow({
           <input
             className="input"
             type="number"
-            min="0.5"
-            step="0.5"
+            min="0"
+            step="any"
             placeholder="Qty"
             value={item.totalQty || ""}
             onChange={(e) => updateField("totalQty", e.target.value)}
+            onFocus={(e) => e.target.select()}
             title="Total servings/quantity of this item"
           />
           <div
@@ -474,10 +497,11 @@ function ItemRow({
               className="input"
               type="number"
               min="0"
-              step="0.01"
+              step="any"
               placeholder="0.00"
               value={withoutVatDisplay}
               onChange={(e) => handleWithoutVatChange(e.target.value)}
+              onFocus={(e) => e.target.select()}
               style={{ paddingLeft: 26, fontSize: 13 }}
               title="Unit price without VAT (e.g. 100)"
             />
@@ -514,10 +538,11 @@ function ItemRow({
               className="input"
               type="number"
               min="0"
-              step="0.01"
+              step="any"
               placeholder="0.00"
               value={withVatDisplay}
               onChange={(e) => handleWithVatChange(e.target.value)}
+              onFocus={(e) => e.target.select()}
               style={{
                 paddingLeft: 26,
                 fontSize: 13,
@@ -559,10 +584,11 @@ function ItemRow({
               className="input"
               type="number"
               min="0"
-              step="0.01"
+              step="any"
               placeholder="0.00"
               value={totalPriceDisplay}
               onChange={(e) => handleTotalPriceChange(e.target.value)}
+              onFocus={(e) => e.target.select()}
               style={{
                 paddingLeft: 26,
                 fontSize: 13,
@@ -664,13 +690,23 @@ function ItemRow({
                   {checked && showFractions && (
                     <input
                       className="qty-input"
-                      type="number"
-                      min="0"
-                      step="0.5"
-                      value={share?.qty ?? 1}
-                      onChange={(e) => updateQty(f.id, e.target.value)}
+                      type="text"
+                      inputMode="decimal"
+                      value={
+                        share?.qty !== undefined && share?.qty !== null
+                          ? String(Number(share.qty.toFixed(2)))
+                          : ""
+                      }
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        if (/^[0-9]*\.?[0-9]*$/.test(val)) {
+                          updateQty(f.id, val);
+                        }
+                      }}
+                      onFocus={(e) => e.target.select()}
+                      onClick={(e) => e.stopPropagation()}
                       title={`How many did ${f.name} have? (e.g. 0.5, 1, 2)`}
-                      placeholder="qty"
+                      placeholder="0"
                       style={{ width: 62 }}
                     />
                   )}
@@ -727,7 +763,18 @@ function ItemRow({
                 onClick={() => {
                   const next = !showFractions;
                   setShowFractions(next);
-                  if (!next) {
+                  if (next) {
+                    if (item.shares.length > 0) {
+                      const each =
+                        Math.round(
+                          ((item.totalQty || 1) / item.shares.length) * 100,
+                        ) / 100;
+                      onChange({
+                        ...item,
+                        shares: item.shares.map((s) => ({ ...s, qty: each })),
+                      });
+                    }
+                  } else {
                     onChange({
                       ...item,
                       shares: item.shares.map((s) => ({ ...s, qty: 1 })),
@@ -738,6 +785,31 @@ function ItemRow({
                 {showFractions ? "Standard split" : "Assign quantities"}
               </button>
 
+              {showFractions && item.shares.length > 0 && (
+                <button
+                  type="button"
+                  className="btn btn-ghost"
+                  style={{
+                    padding: "4px 10px",
+                    fontSize: 12,
+                    borderRadius: 6,
+                  }}
+                  onClick={() => {
+                    const each =
+                      Math.round(
+                        ((item.totalQty || 1) / item.shares.length) * 100,
+                      ) / 100;
+                    onChange({
+                      ...item,
+                      shares: item.shares.map((s) => ({ ...s, qty: each })),
+                    });
+                  }}
+                  title="Distribute item quantity evenly among selected friends"
+                >
+                  Split evenly
+                </button>
+              )}
+
               <button
                 type="button"
                 className="btn btn-amber"
@@ -745,7 +817,7 @@ function ItemRow({
                 onClick={() => {
                   const each =
                     showFractions && friends.length > 0
-                      ? Math.round((item.totalQty / friends.length) * 100) / 100
+                      ? Math.round(((item.totalQty || 1) / friends.length) * 100) / 100
                       : 1;
                   onChange({
                     ...item,
@@ -863,7 +935,7 @@ function SummaryExportView({
               {title || "BillSplit"}
             </h1>
           </div>
-          <div style={{ fontSize: 11.5, color: "#64748b" }}>
+          <div style={{ fontSize: 11.5, color: "#64748b" }} suppressHydrationWarning>
             {new Date().toLocaleDateString("en-IN", {
               weekday: "short",
               year: "numeric",
@@ -1370,23 +1442,9 @@ function SummaryExportView({
                 marginBottom: 7,
               }}
             >
-              <span style={{ color: "#64748b" }}>Flat Fee</span>
+              <span style={{ color: "#64748b" }}>+ Flat Fee</span>
               <span style={{ fontWeight: 600 }}>
                 +{formatCurrency(feeAmount)}
-              </span>
-            </div>
-          )}
-          {discountAmount !== 0 && (
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                marginBottom: 7,
-              }}
-            >
-              <span style={{ color: "#64748b" }}>Discount</span>
-              <span style={{ fontWeight: 600, color: "#10b981" }}>
-                -{formatCurrency(discountAmount)}
               </span>
             </div>
           )}
@@ -1398,9 +1456,23 @@ function SummaryExportView({
                 marginBottom: 7,
               }}
             >
-              <span style={{ color: "#64748b" }}>Tax</span>
+              <span style={{ color: "#64748b" }}>+ Tax</span>
               <span style={{ fontWeight: 600 }}>
                 +{formatCurrency(taxAmount)}
+              </span>
+            </div>
+          )}
+          {discountAmount !== 0 && (
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                marginBottom: 7,
+              }}
+            >
+              <span style={{ color: "#64748b" }}>- Discount</span>
+              <span style={{ fontWeight: 600, color: "#10b981" }}>
+                -{formatCurrency(discountAmount)}
               </span>
             </div>
           )}
@@ -1412,7 +1484,7 @@ function SummaryExportView({
                 marginBottom: 7,
               }}
             >
-              <span style={{ color: "#64748b" }}>Tip</span>
+              <span style={{ color: "#64748b" }}>+ Tip</span>
               <span style={{ fontWeight: 600 }}>
                 +{formatCurrency(tipAmount)}
               </span>
@@ -1450,6 +1522,100 @@ function SummaryExportView({
       >
         <span>Generated by BillSplit</span>
         <span>Fair &amp; Effortless Bill Splitting</span>
+      </div>
+    </div>
+  );
+}
+
+// ─── Fee Row Component ────────────────────────────────────────────────────────
+
+function FeeRow({
+  label,
+  config,
+  onChange,
+}: {
+  label: string;
+  config: FeeConfig;
+  onChange: (c: FeeConfig) => void;
+}) {
+  return (
+    <div className="total-row">
+      <span style={{ color: "var(--text-secondary)", fontSize: 13 }}>
+        {label}
+      </span>
+      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+        <button
+          type="button"
+          className={`btn ${config.type === "flat" ? "btn-primary" : "btn-ghost"}`}
+          style={{ padding: "3px 9px", fontSize: 12, borderRadius: 6 }}
+          onClick={() => onChange({ ...config, type: "flat" })}
+        >
+          Flat
+        </button>
+        <button
+          type="button"
+          className={`btn ${config.type === "percent" ? "btn-primary" : "btn-ghost"}`}
+          style={{ padding: "3px 9px", fontSize: 12, borderRadius: 6 }}
+          onClick={() => onChange({ ...config, type: "percent" })}
+        >
+          %
+        </button>
+        <div style={{ position: "relative", width: 90 }}>
+          {config.type === "flat" && (
+            <span
+              style={{
+                position: "absolute",
+                left: 7,
+                top: "50%",
+                transform: "translateY(-50%)",
+                color: "var(--text-muted)",
+                fontSize: 11,
+                fontWeight: 600,
+                pointerEvents: "none",
+              }}
+            >
+              Rs
+            </span>
+          )}
+          <input
+            className="qty-input"
+            type="text"
+            inputMode="decimal"
+            value={config.value === 0 ? "" : String(config.value)}
+            onChange={(e) => {
+              const val = e.target.value;
+              if (val === "") {
+                onChange({ ...config, value: 0 });
+              } else if (/^[0-9]*\.?[0-9]*$/.test(val)) {
+                const num = parseFloat(val);
+                onChange({ ...config, value: isNaN(num) ? 0 : num });
+              }
+            }}
+            onFocus={(e) => e.target.select()}
+            style={{
+              width: 90,
+              paddingLeft: config.type === "flat" ? 26 : 8,
+              paddingRight: config.type === "percent" ? 22 : 8,
+              textAlign: config.type === "flat" ? "left" : "center",
+            }}
+            placeholder="0"
+          />
+          {config.type === "percent" && (
+            <span
+              style={{
+                position: "absolute",
+                right: 8,
+                top: "50%",
+                transform: "translateY(-50%)",
+                color: "var(--text-muted)",
+                fontSize: 13,
+                pointerEvents: "none",
+              }}
+            >
+              %
+            </span>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -1967,86 +2133,6 @@ export default function BillSplitPage() {
       setExporting(false);
     }
   }, [billTitle]);
-
-  function FeeRow({
-    label,
-    config,
-    onChange,
-  }: {
-    label: string;
-    config: FeeConfig;
-    onChange: (c: FeeConfig) => void;
-  }) {
-    return (
-      <div className="total-row">
-        <span style={{ color: "var(--text-secondary)", fontSize: 13 }}>
-          {label}
-        </span>
-        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-          <button
-            className={`btn ${config.type === "flat" ? "btn-primary" : "btn-ghost"}`}
-            style={{ padding: "3px 9px", fontSize: 12, borderRadius: 6 }}
-            onClick={() => onChange({ ...config, type: "flat" })}
-          >
-            Flat
-          </button>
-          <button
-            className={`btn ${config.type === "percent" ? "btn-primary" : "btn-ghost"}`}
-            style={{ padding: "3px 9px", fontSize: 12, borderRadius: 6 }}
-            onClick={() => onChange({ ...config, type: "percent" })}
-          >
-            %
-          </button>
-          <div style={{ position: "relative", width: 90 }}>
-            {config.type === "flat" && (
-              <span
-                style={{
-                  position: "absolute",
-                  left: 7,
-                  top: "50%",
-                  transform: "translateY(-50%)",
-                  color: "var(--text-muted)",
-                  fontSize: 11,
-                  fontWeight: 600,
-                }}
-              >
-                Rs
-              </span>
-            )}
-            <input
-              className="qty-input"
-              type="number"
-              min="0"
-              step="0.5"
-              value={config.value || ""}
-              onChange={(e) =>
-                onChange({ ...config, value: parseFloat(e.target.value) || 0 })
-              }
-              style={{
-                width: 90,
-                paddingLeft: config.type === "flat" ? 26 : 8,
-              }}
-              placeholder="0"
-            />
-            {config.type === "percent" && (
-              <span
-                style={{
-                  position: "absolute",
-                  right: 8,
-                  top: "50%",
-                  transform: "translateY(-50%)",
-                  color: "var(--text-muted)",
-                  fontSize: 13,
-                }}
-              >
-                %
-              </span>
-            )}
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div style={{ minHeight: "100vh", background: "var(--bg-primary)" }}>
@@ -2675,9 +2761,94 @@ export default function BillSplitPage() {
               <span className="total-amount">{formatCurrency(subtotal)}</span>
             </div>
             <FeeRow label="Flat Fees" config={flatFee} onChange={setFlatFee} />
-            <FeeRow label="Discount" config={discount} onChange={setDiscount} />
             <FeeRow label="Tax" config={tax} onChange={setTax} />
+            <FeeRow label="Discount" config={discount} onChange={setDiscount} />
             <FeeRow label="Tip" config={tip} onChange={setTip} />
+
+            {/* Arithmetic Breakdown */}
+            <div
+              style={{
+                marginTop: 12,
+                padding: "10px 12px",
+                background: "var(--bg-secondary)",
+                borderRadius: 10,
+                border: "1px solid var(--border)",
+                fontSize: 12,
+                display: "flex",
+                flexDirection: "column",
+                gap: 5,
+              }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  color: "var(--text-secondary)",
+                }}
+              >
+                <span>Subtotal</span>
+                <span>{formatCurrency(subtotal)}</span>
+              </div>
+              {feeAmount > 0 && (
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    color: "var(--text-secondary)",
+                  }}
+                >
+                  <span>
+                    + Flat Fees{" "}
+                    {flatFee.type === "percent" ? `(${flatFee.value}%)` : ""}
+                  </span>
+                  <span>+{formatCurrency(feeAmount)}</span>
+                </div>
+              )}
+              {taxAmount > 0 && (
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    color: "var(--text-secondary)",
+                  }}
+                >
+                  <span>
+                    + Tax {tax.type === "percent" ? `(${tax.value}%)` : ""}
+                  </span>
+                  <span>+{formatCurrency(taxAmount)}</span>
+                </div>
+              )}
+              {discountAmount > 0 && (
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    color: "var(--accent-emerald)",
+                  }}
+                >
+                  <span>
+                    - Discount{" "}
+                    {discount.type === "percent" ? `(${discount.value}%)` : ""}
+                  </span>
+                  <span>-{formatCurrency(discountAmount)}</span>
+                </div>
+              )}
+              {tipAmount > 0 && (
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    color: "var(--text-secondary)",
+                  }}
+                >
+                  <span>
+                    + Tip {tip.type === "percent" ? `(${tip.value}%)` : ""}
+                  </span>
+                  <span>+{formatCurrency(tipAmount)}</span>
+                </div>
+              )}
+            </div>
+
             <div
               style={{
                 display: "flex",
@@ -3424,18 +3595,20 @@ export default function BillSplitPage() {
         }}
       >
         <div ref={exportRef}>
-          <SummaryExportView
-            title={billTitle}
-            friends={friends}
-            items={items}
-            flatFee={flatFee}
-            discount={discount}
-            tax={tax}
-            tip={tip}
-            subtotal={subtotal}
-            grandTotal={grandTotal}
-            personTotals={personTotals}
-          />
+          {isHydrated && (
+            <SummaryExportView
+              title={billTitle}
+              friends={friends}
+              items={items}
+              flatFee={flatFee}
+              discount={discount}
+              tax={tax}
+              tip={tip}
+              subtotal={subtotal}
+              grandTotal={grandTotal}
+              personTotals={personTotals}
+            />
+          )}
         </div>
       </div>
     </div>
