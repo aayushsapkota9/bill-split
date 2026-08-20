@@ -28,7 +28,7 @@ import { ConfirmModal } from "./components/ConfirmModal";
 export default function BillSplitPage() {
   const isLoadedRef = useRef(false);
 
-  const [billTitle, setBillTitle] = useState("Dinner with Friends");
+  const [billTitle, setBillTitle] = useState("Kasko Kati");
   const [friends, setFriends] = useState<Friend[]>([]);
   const [newFriendName, setNewFriendName] = useState("");
   const [items, setItems] = useState<BillItem[]>([
@@ -98,7 +98,13 @@ export default function BillSplitPage() {
       const currentDraft = localStorage.getItem("billsplit_current_draft");
       if (currentDraft) {
         const parsed = JSON.parse(currentDraft);
-        if (parsed.billTitle !== undefined) setBillTitle(parsed.billTitle);
+        if (parsed.billTitle !== undefined) {
+          if (parsed.billTitle === "Dinner with Friends" || !parsed.billTitle) {
+            setBillTitle("Kasko Kati");
+          } else {
+            setBillTitle(parsed.billTitle);
+          }
+        }
         if (Array.isArray(parsed.friends))
           setFriends(sanitizeFriends(parsed.friends));
         if (Array.isArray(parsed.items) && parsed.items.length > 0)
@@ -302,7 +308,7 @@ export default function BillSplitPage() {
       confirmVariant: "amber",
       confirmText: "Start Fresh",
       onConfirm: () => {
-        setBillTitle("Dinner with Friends");
+        setBillTitle("Kasko Kati");
         // Keep friends list intact; reset only items and fees
         setItems([{ id: uid(), name: "", price: 0, totalQty: 1, shares: [] }]);
         setIsVatBill(true);
@@ -425,7 +431,6 @@ export default function BillSplitPage() {
         onOpenHistory={() => setShowHistoryModal(true)}
         onSaveHistory={saveToHistory}
         onResetBill={handleResetNewBill}
-        onOpenExportModal={() => setShowExportModal(true)}
       />
 
       {/* Clean 2-Segment Mobile Tab Control (< 1024px) */}
@@ -435,15 +440,46 @@ export default function BillSplitPage() {
             type="button"
             className={`mobile-segment-btn ${mobileTab === "items" ? "active" : ""}`}
             onClick={() => setMobileTab("items")}
+            style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 6 }}
           >
-            🛒 Items ({items.length})
+            <svg
+              width="15"
+              height="15"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" />
+              <line x1="3" y1="6" x2="21" y2="6" />
+              <path d="M16 10a4 4 0 0 1-8 0" />
+            </svg>
+            <span>Items ({items.length})</span>
           </button>
           <button
             type="button"
             className={`mobile-segment-btn ${mobileTab === "friends" ? "active" : ""}`}
             onClick={() => setMobileTab("friends")}
+            style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 6 }}
           >
-            👥 Friends ({friends.length})
+            <svg
+              width="15"
+              height="15"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+              <circle cx="9" cy="7" r="4" />
+              <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+              <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+            </svg>
+            <span>Friends ({friends.length})</span>
           </button>
         </div>
       </nav>
@@ -527,7 +563,7 @@ export default function BillSplitPage() {
             <span className="mobile-bottom-amount">{formatCurrency(grandTotal)}</span>
           </div>
           <div className="mobile-bottom-subtext">
-            <span>{items.length} {items.length === 1 ? "item" : "items"} • Tap for breakdown ↗</span>
+            <span>Tap for breakdown ↗</span>
           </div>
         </div>
 
@@ -537,8 +573,25 @@ export default function BillSplitPage() {
           onClick={() => setShowExportModal(true)}
           disabled={friends.length === 0}
           title="Export bill as PDF or Image"
+          style={{ display: "inline-flex", alignItems: "center", gap: 5 }}
         >
-          <span>📤 Share</span>
+          <svg
+            width="15"
+            height="15"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <circle cx="18" cy="5" r="3" />
+            <circle cx="6" cy="12" r="3" />
+            <circle cx="18" cy="19" r="3" />
+            <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" />
+            <line x1="15.41" y1="6.51" x2="8.59" y2="10.49" />
+          </svg>
+          <span>Share</span>
         </button>
       </div>
 

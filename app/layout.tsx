@@ -8,9 +8,9 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "BillSplit — Split Bills Easily",
+  title: "Kasko Kati — Smart Bill Splitter",
   description:
-    "Split restaurant bills and shared expenses with friends. Add items, assign portions, and export a PDF summary.",
+    "Kasko Kati: Split restaurant bills and shared expenses with friends easily. Add items, assign portions, handle VAT & taxes, and export receipts.",
 };
 
 export const viewport: Viewport = {

@@ -45,8 +45,23 @@ export function ItemsSection({
   return (
     <section className="items-section">
       <div className="section-header">
-        <h2 className="section-title">
-          <span style={{ fontSize: 18 }}>🛒</span> Bill Items
+        <h2 className="section-title" style={{ display: "flex", alignItems: "center", gap: 7 }}>
+          <svg
+            width="18"
+            height="18"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            style={{ color: "var(--accent-teal)" }}
+          >
+            <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" />
+            <line x1="3" y1="6" x2="21" y2="6" />
+            <path d="M16 10a4 4 0 0 1-8 0" />
+          </svg>
+          <span>Bill Items</span>
           <span className="badge-count-secondary">
             {items.length}
           </span>
@@ -72,10 +87,39 @@ export function ItemsSection({
       </div>
 
       {items.length === 0 && (
-        <div className="empty-items-card">
-          <div style={{ fontSize: 36, marginBottom: 10 }}>📋</div>
-          <div style={{ fontSize: 15, fontWeight: 500 }}>No items yet</div>
-          <div style={{ fontSize: 13, marginTop: 4 }}>
+        <div className="empty-items-card" style={{ padding: "28px 16px", textAlign: "center" }}>
+          <div
+            style={{
+              background: "rgba(20, 184, 166, 0.12)",
+              color: "var(--accent-teal)",
+              width: 48,
+              height: 48,
+              borderRadius: 12,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              margin: "0 auto 12px",
+            }}
+          >
+            <svg
+              width="24"
+              height="24"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+              <polyline points="14 2 14 8 20 8" />
+              <line x1="16" y1="13" x2="8" y2="13" />
+              <line x1="16" y1="17" x2="8" y2="17" />
+              <polyline points="10 9 9 9 8 9" />
+            </svg>
+          </div>
+          <div style={{ fontSize: 15, fontWeight: 600, color: "var(--text-primary)" }}>No items yet</div>
+          <div style={{ fontSize: 13, marginTop: 4, color: "var(--text-muted)" }}>
             Click &quot;+ Add Item&quot; below to start
           </div>
         </div>

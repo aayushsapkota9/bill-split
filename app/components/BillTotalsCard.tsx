@@ -45,8 +45,24 @@ export function BillTotalsCard({
   return (
     <aside className="summary-sidebar">
       <div className="card bill-totals-card">
-        <h3 className="section-title" style={{ marginBottom: 14, fontSize: 15 }}>
-          <span style={{ fontSize: 17 }}>🧮</span> Bill Totals
+        <h3 className="section-title" style={{ marginBottom: 14, fontSize: 15, display: "flex", alignItems: "center", gap: 7 }}>
+          <svg
+            width="17"
+            height="17"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            style={{ color: "var(--accent-amber)" }}
+          >
+            <rect x="4" y="2" width="16" height="20" rx="2" />
+            <line x1="8" y1="6" x2="16" y2="6" />
+            <line x1="16" y1="14" x2="16" y2="18" />
+            <path d="M8 10h.01M12 10h.01M16 10h.01M8 14h.01M12 14h.01M8 18h.01M12 18h.01" />
+          </svg>
+          <span>Bill Totals</span>
         </h3>
 
         <div className="total-row">
@@ -116,10 +132,26 @@ export function BillTotalsCard({
         className="btn btn-primary"
         onClick={onOpenExportModal}
         disabled={!hasFriends}
-        style={{ width: "100%", justifyContent: "center", padding: "10px 14px", fontSize: 13.5 }}
-        title="Export bill as PDF or PNG Image"
+        style={{ width: "100%", justifyContent: "center", padding: "10px 14px", fontSize: 13.5, gap: 7 }}
+        title="Share or Export bill as PDF / Image"
       >
-        📤 Export / Share Bill
+        <svg
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2.2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <circle cx="18" cy="5" r="3" />
+          <circle cx="6" cy="12" r="3" />
+          <circle cx="18" cy="19" r="3" />
+          <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" />
+          <line x1="15.41" y1="6.51" x2="8.59" y2="10.49" />
+        </svg>
+        <span>Share Bill</span>
       </button>
     </aside>
   );

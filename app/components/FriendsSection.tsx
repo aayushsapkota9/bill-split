@@ -63,8 +63,24 @@ export function FriendsSection({
   return (
     <aside className="friends-sidebar" style={{ width: "100%" }}>
       <div className="section-header">
-        <h2 className="section-title">
-          <span style={{ fontSize: 18 }}>👥</span> Friends
+        <h2 className="section-title" style={{ display: "flex", alignItems: "center", gap: 7 }}>
+          <svg
+            width="18"
+            height="18"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            style={{ color: "var(--accent-teal)" }}
+          >
+            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+            <circle cx="9" cy="7" r="4" />
+            <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+            <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+          </svg>
+          <span>Friends</span>
           <span className="badge-count">
             {friends.length}
           </span>
@@ -106,11 +122,39 @@ export function FriendsSection({
       </div>
 
       {friends.length === 0 && (
-        <div className="empty-friends-card">
-          <div style={{ fontSize: 28, marginBottom: 8 }}>🤝</div>
-          Add friends to
-          <br />
-          start splitting
+        <div className="empty-friends-card" style={{ padding: "28px 16px", textAlign: "center" }}>
+          <div
+            style={{
+              background: "rgba(20, 184, 166, 0.12)",
+              color: "var(--accent-teal)",
+              width: 48,
+              height: 48,
+              borderRadius: 12,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              margin: "0 auto 12px",
+            }}
+          >
+            <svg
+              width="24"
+              height="24"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+              <circle cx="8.5" cy="7" r="4" />
+              <line x1="20" y1="8" x2="20" y2="14" />
+              <line x1="23" y1="11" x2="17" y2="11" />
+            </svg>
+          </div>
+          <div style={{ fontSize: 14.5, fontWeight: 600, color: "var(--text-primary)" }}>
+            Add friends to start splitting
+          </div>
         </div>
       )}
 

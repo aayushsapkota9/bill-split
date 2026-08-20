@@ -52,8 +52,24 @@ export function FeesModal({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="modal-header">
-          <h2 className="modal-title">
-            <span>🧮</span> Fees, Tax &amp; Breakdown
+          <h2 className="modal-title" style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <svg
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              style={{ color: "var(--accent-amber)" }}
+            >
+              <rect x="4" y="2" width="16" height="20" rx="2" />
+              <line x1="8" y1="6" x2="16" y2="6" />
+              <line x1="16" y1="14" x2="16" y2="18" />
+              <path d="M8 10h.01M12 10h.01M16 10h.01M8 14h.01M12 14h.01M8 18h.01M12 18h.01" />
+            </svg>
+            <span>Fees, Tax &amp; Breakdown</span>
           </h2>
           <button
             type="button"

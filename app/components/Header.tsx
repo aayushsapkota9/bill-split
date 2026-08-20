@@ -1,4 +1,5 @@
 import React from "react";
+import { KaskoKatiLogo } from "./Logo";
 
 interface HeaderProps {
   billTitle: string;
@@ -8,7 +9,6 @@ interface HeaderProps {
   onOpenHistory: () => void;
   onSaveHistory: () => void;
   onResetBill: () => void;
-  onOpenExportModal: () => void;
 }
 
 export function Header({
@@ -19,20 +19,17 @@ export function Header({
   onOpenHistory,
   onSaveHistory,
   onResetBill,
-  onOpenExportModal,
 }: HeaderProps) {
   return (
     <header className="app-header">
       {/* Brand & Title */}
       <div className="header-brand-container">
-        <span className="header-icon" role="img" aria-label="Receipt">
-          🧾
-        </span>
+        <KaskoKatiLogo size={26} showText={false} />
         <div className="header-title-wrap">
           <input
             value={billTitle}
             onChange={(e) => setBillTitle(e.target.value)}
-            placeholder="Bill Title..."
+            placeholder="Kasko Kati — Bill Title..."
             className="header-title-input"
             title="Click to edit bill title"
           />
@@ -107,28 +104,6 @@ export function Header({
           {isHydrated && savedBillsCount > 0 && (
             <span className="header-saved-badge">{savedBillsCount}</span>
           )}
-        </button>
-
-        {/* Share / Export (PDF or Image) */}
-        <button
-          type="button"
-          className="header-icon-btn header-export-btn"
-          onClick={onOpenExportModal}
-          title="Export / Share Bill (PDF or Image)"
-          aria-label="Export or Share Bill"
-        >
-          <svg
-            width="16"
-            height="16"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2.2"
-          >
-            <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" />
-            <polyline points="16 6 12 2 8 6" />
-            <line x1="12" y1="2" x2="12" y2="15" />
-          </svg>
         </button>
       </div>
     </header>

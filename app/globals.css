@@ -221,16 +221,16 @@ body {
 .header-title-input {
   background: transparent;
   border: none;
-  border-bottom: 1px dashed var(--border-hover);
   color: var(--text-primary);
-  font-size: 15px;
-  font-weight: 700;
+  font-size: 16px;
+  font-weight: 800;
   outline: none;
-  padding: 2px 4px;
+  padding: 2px 0;
   width: 100%;
+  letter-spacing: -0.02em;
 }
 .header-title-input:focus {
-  border-bottom-color: var(--accent-teal);
+  outline: none;
 }
 
 .header-actions {
@@ -459,23 +459,21 @@ body {
   gap: 8px;
 }
 
-.badge-count {
-  background: var(--accent-teal);
-  color: white;
-  border-radius: 20px;
-  padding: 1px 8px;
-  font-size: 11px;
-  font-weight: 700;
-}
-
+.badge-count,
 .badge-count-secondary {
-  background: var(--bg-secondary);
-  color: var(--text-secondary);
-  border-radius: 20px;
-  padding: 1px 8px;
-  font-size: 11px;
+  background: var(--bg-card);
+  color: var(--text-primary);
+  border: 1px solid var(--border-hover);
+  border-radius: 9999px;
+  padding: 2px 9px;
+  font-size: 12px;
   font-weight: 700;
-  border: 1px solid var(--border);
+  min-width: 24px;
+  text-align: center;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1.2;
 }
 
 /* ==========================================================================
@@ -536,8 +534,6 @@ body {
   font-weight: 800;
   font-size: 15.5px;
   color: var(--text-primary);
-  text-decoration: underline;
-  text-underline-offset: 3px;
   letter-spacing: -0.01em;
   margin: 0;
 }
