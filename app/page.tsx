@@ -1000,7 +1000,7 @@ function SummaryExportView({
                     display: "flex",
                     alignItems: "flex-start",
                     gap: 10,
-                    marginBottom: 5,
+                    marginBottom: 10,
                     flexWrap: "wrap",
                   }}
                 >
@@ -1030,7 +1030,7 @@ function SummaryExportView({
                         background: "#ffffff",
                         border: "1px solid #cbd5e1",
                         borderRadius: 6,
-                        paddingTop: 9,
+                        paddingTop: 2,
                         paddingBottom: 9,
                         paddingLeft: 12,
                         paddingRight: 12,
@@ -1067,7 +1067,7 @@ function SummaryExportView({
                         background: "#f0fdfa",
                         border: "1.5px solid #5eead4",
                         borderRadius: 6,
-                        paddingTop: 9,
+                        paddingTop: 2,
                         paddingBottom: 9,
                         paddingLeft: 12,
                         paddingRight: 12,
@@ -1106,7 +1106,7 @@ function SummaryExportView({
                         background: "#f0fdf4",
                         border: "1.5px solid #86efac",
                         borderRadius: 6,
-                        paddingTop: 9,
+                        paddingTop: 2,
                         paddingBottom: 9,
                         paddingLeft: 12,
                         paddingRight: 12,
@@ -1152,8 +1152,8 @@ function SummaryExportView({
                             ? "1.5px solid #f59e0b"
                             : "1px solid #e2e8f0",
                           borderRadius: 6,
-                          paddingTop: 7,
-                          paddingBottom: 7,
+                          paddingTop: 2,
+                          paddingBottom: 10,
                           paddingLeft: 9,
                           paddingRight: 9,
                           fontSize: 11,
@@ -1190,6 +1190,7 @@ function SummaryExportView({
                             display: "inline-block",
                             verticalAlign: "middle",
                             marginLeft: 6,
+                            marginTop: 10,
                           }}
                         />
                       </span>
