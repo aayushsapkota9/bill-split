@@ -1624,23 +1624,119 @@ function FeeRow({
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 export default function BillSplitPage() {
-  const [billTitle, setBillTitle] = useState("Dinner with Friends");
-  const [friends, setFriends] = useState<Friend[]>([]);
-  const [newFriendName, setNewFriendName] = useState("");
-  const [items, setItems] = useState<BillItem[]>([
-    { id: uid(), name: "", price: 0, totalQty: 1, shares: [] },
-  ]);
-  const [flatFee, setFlatFee] = useState<FeeConfig>({ type: "flat", value: 0 });
-  const [discount, setDiscount] = useState<FeeConfig>({
-    type: "flat",
-    value: 0,
+  const isLoadedRef = useRef(false);
+
+  const [billTitle, setBillTitle] = useState(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const raw = localStorage.getItem("billsplit_current_draft");
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (parsed?.billTitle !== undefined) return String(parsed.billTitle);
+        }
+      } catch {}
+    }
+    return "Dinner with Friends";
   });
-  const [tax, setTax] = useState<FeeConfig>({ type: "percent", value: 0 });
-  const [tip, setTip] = useState<FeeConfig>({ type: "percent", value: 0 });
+
+  const [friends, setFriends] = useState<Friend[]>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const raw = localStorage.getItem("billsplit_current_draft");
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (Array.isArray(parsed?.friends) && parsed.friends.length > 0) {
+            return sanitizeFriends(parsed.friends);
+          }
+        }
+      } catch {}
+    }
+    return [];
+  });
+
+  const [newFriendName, setNewFriendName] = useState("");
+
+  const [items, setItems] = useState<BillItem[]>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const raw = localStorage.getItem("billsplit_current_draft");
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (Array.isArray(parsed?.items) && parsed.items.length > 0) {
+            return sanitizeItems(parsed.items);
+          }
+        }
+      } catch {}
+    }
+    return [{ id: uid(), name: "", price: 0, totalQty: 1, shares: [] }];
+  });
+
+  const [flatFee, setFlatFee] = useState<FeeConfig>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const raw = localStorage.getItem("billsplit_current_draft");
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (parsed?.flatFee) return sanitizeFee(parsed.flatFee, "flat");
+        }
+      } catch {}
+    }
+    return { type: "flat", value: 0 };
+  });
+
+  const [discount, setDiscount] = useState<FeeConfig>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const raw = localStorage.getItem("billsplit_current_draft");
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (parsed?.discount) return sanitizeFee(parsed.discount, "flat");
+        }
+      } catch {}
+    }
+    return { type: "flat", value: 0 };
+  });
+
+  const [tax, setTax] = useState<FeeConfig>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const raw = localStorage.getItem("billsplit_current_draft");
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (parsed?.tax) return sanitizeFee(parsed.tax, "percent");
+        }
+      } catch {}
+    }
+    return { type: "percent", value: 0 };
+  });
+
+  const [tip, setTip] = useState<FeeConfig>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const raw = localStorage.getItem("billsplit_current_draft");
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (parsed?.tip) return sanitizeFee(parsed.tip, "percent");
+        }
+      } catch {}
+    }
+    return { type: "percent", value: 0 };
+  });
 
   // Persistence state
   const [isHydrated, setIsHydrated] = useState(false);
-  const [savedBills, setSavedBills] = useState<SavedBill[]>([]);
+  const [savedBills, setSavedBills] = useState<SavedBill[]>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const raw = localStorage.getItem("billsplit_saved_history");
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (Array.isArray(parsed)) return sanitizeSavedBills(parsed);
+        }
+      } catch {}
+    }
+    return [];
+  });
   const [showHistoryModal, setShowHistoryModal] = useState(false);
   const [saveStatus, setSaveStatus] = useState<"saved" | "saving">("saved");
 
@@ -1665,30 +1761,33 @@ export default function BillSplitPage() {
       if (currentDraft) {
         const parsed = JSON.parse(currentDraft);
         if (parsed.billTitle !== undefined) setBillTitle(parsed.billTitle);
-        if (Array.isArray(parsed.friends)) setFriends(parsed.friends);
+        if (Array.isArray(parsed.friends))
+          setFriends(sanitizeFriends(parsed.friends));
         if (Array.isArray(parsed.items) && parsed.items.length > 0)
-          setItems(parsed.items);
-        if (parsed.flatFee) setFlatFee(parsed.flatFee);
-        if (parsed.discount) setDiscount(parsed.discount);
-        if (parsed.tax) setTax(parsed.tax);
-        if (parsed.tip) setTip(parsed.tip);
+          setItems(sanitizeItems(parsed.items));
+        if (parsed.flatFee) setFlatFee(sanitizeFee(parsed.flatFee, "flat"));
+        if (parsed.discount) setDiscount(sanitizeFee(parsed.discount, "flat"));
+        if (parsed.tax) setTax(sanitizeFee(parsed.tax, "percent"));
+        if (parsed.tip) setTip(sanitizeFee(parsed.tip, "percent"));
       }
 
       const storedHistory = localStorage.getItem("billsplit_saved_history");
       if (storedHistory) {
         const parsedHistory = JSON.parse(storedHistory);
-        if (Array.isArray(parsedHistory)) setSavedBills(parsedHistory);
+        if (Array.isArray(parsedHistory))
+          setSavedBills(sanitizeSavedBills(parsedHistory));
       }
     } catch (err) {
       console.error("Failed to load saved bill data from localStorage", err);
     } finally {
       setIsHydrated(true);
+      isLoadedRef.current = true;
     }
   }, []);
 
   // ─── Auto-save to LocalStorage whenever state updates ───
   useEffect(() => {
-    if (!isHydrated) return;
+    if (!isHydrated || !isLoadedRef.current) return;
     setSaveStatus("saving");
     const timeout = setTimeout(() => {
       try {
@@ -1707,7 +1806,7 @@ export default function BillSplitPage() {
       } catch (err) {
         console.error("Auto-save failed", err);
       }
-    }, 400);
+    }, 300);
 
     return () => clearTimeout(timeout);
   }, [billTitle, friends, items, flatFee, discount, tax, tip, isHydrated]);
