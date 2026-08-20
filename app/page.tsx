@@ -1053,6 +1053,45 @@ function SummaryExportView({
                       qty
                     </div>
                   </div>
+                  {/* Unit Without VAT */}
+                  <div
+                    style={{
+                      display: "flex",
+                      flexDirection: "column",
+                      alignItems: "center",
+                      minWidth: 100,
+                    }}
+                  >
+                    <div
+                      style={{
+                        background: "#ffffff",
+                        border: "1px solid #cbd5e1",
+                        borderRadius: 6,
+                        paddingTop: 2,
+                        paddingBottom: 9,
+                        paddingLeft: 12,
+                        paddingRight: 12,
+                        fontSize: 11.5,
+                        fontWeight: 600,
+                        color: "#475569",
+                        textAlign: "center",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      {formatCurrency(item.price > 0 ? item.price / 1.13 : 0)}
+                    </div>
+                    <div
+                      style={{
+                        fontSize: 9,
+                        color: "#94a3b8",
+                        marginTop: 4,
+                        fontWeight: 500,
+                        textAlign: "center",
+                      }}
+                    >
+                      Unit (No VAT)
+                    </div>
+                  </div>
                   {/* Unit With VAT */}
                   <div
                     style={{
