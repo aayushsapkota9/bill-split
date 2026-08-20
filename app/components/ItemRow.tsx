@@ -148,138 +148,24 @@ export function ItemRow({
 
   return (
     <div className="item-row">
-      {/* Top Input Bar */}
-      <div className="item-inputs-grid">
-        {/* Item Name */}
-        <div className="input-block item-name-block">
+      {/* Top Bar: Name & Delete */}
+      <div className="item-header-row">
+        <div className="item-name-wrap">
           <input
-            className="input"
+            className="input item-name-input"
             placeholder="Item name (e.g. Momos)"
             value={item.name}
             onChange={(e) => updateField("name", e.target.value)}
-            style={{ fontSize: 14, fontWeight: 500 }}
           />
           <div className="input-label">item name</div>
         </div>
 
-        {/* Total Qty */}
-        <div className="input-block item-qty-block">
-          <input
-            className="input"
-            type="number"
-            min="0"
-            step="any"
-            placeholder="Qty"
-            value={item.totalQty || ""}
-            onChange={(e) => updateField("totalQty", e.target.value)}
-            onFocus={(e) => e.target.select()}
-            title="Total servings/quantity of this item"
-          />
-          <div className="input-label">qty</div>
-        </div>
-
-        {canSplit && (
-          <button
-            type="button"
-            className="btn btn-ghost split-x-btn"
-            onClick={handleSplit}
-            title={`Split into ${Math.round(item.totalQty)} individual items`}
-          >
-            <svg
-              width="11"
-              height="11"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2.5"
-            >
-              <path d="M16 3h5v5" />
-              <path d="M4 20L21 3" />
-              <path d="M21 16v5h-5" />
-              <path d="M15 15l6 6" />
-              <path d="M4 4l5 5" />
-            </svg>
-            Split x{Math.round(item.totalQty)}
-          </button>
-        )}
-
-        {/* Unit Without VAT */}
-        <div className="input-block item-price-block">
-          <div className="input-with-symbol">
-            <span className="input-symbol">Rs</span>
-            <input
-              className="input"
-              type="number"
-              min="0"
-              step="any"
-              placeholder="0.00"
-              value={withoutVatDisplay}
-              onChange={(e) => handleWithoutVatChange(e.target.value)}
-              onFocus={(e) => e.target.select()}
-              style={{ paddingLeft: 26, fontSize: 13 }}
-              title="Unit price without VAT (e.g. 100)"
-            />
-          </div>
-          <div className="input-label">Unit (No VAT)</div>
-        </div>
-
-        {/* Unit With VAT (13%) */}
-        <div className="input-block item-price-block">
-          <div className="input-with-symbol">
-            <span className="input-symbol teal">Rs</span>
-            <input
-              className="input"
-              type="number"
-              min="0"
-              step="any"
-              placeholder="0.00"
-              value={withVatDisplay}
-              onChange={(e) => handleWithVatChange(e.target.value)}
-              onFocus={(e) => e.target.select()}
-              style={{
-                paddingLeft: 26,
-                fontSize: 13,
-                borderColor:
-                  item.price > 0 ? "rgba(20, 184, 166, 0.4)" : undefined,
-              }}
-              title="Unit price with 13% VAT (e.g. 113)"
-            />
-          </div>
-          <div className="input-label teal">Unit (13% VAT)</div>
-        </div>
-
-        {/* Total Actual Price */}
-        <div className="input-block item-price-block">
-          <div className="input-with-symbol">
-            <span className="input-symbol emerald">Rs</span>
-            <input
-              className="input"
-              type="number"
-              min="0"
-              step="any"
-              placeholder="0.00"
-              value={totalPriceDisplay}
-              onChange={(e) => handleTotalPriceChange(e.target.value)}
-              onFocus={(e) => e.target.select()}
-              style={{
-                paddingLeft: 26,
-                fontSize: 13,
-                fontWeight: 700,
-                borderColor: "rgba(16, 185, 129, 0.45)",
-                color: "var(--accent-emerald)",
-              }}
-              title="Total actual price for this item (Unit price × Qty)"
-            />
-          </div>
-          <div className="input-label emerald">Total Price</div>
-        </div>
-
-        {/* Delete button */}
         <button
           type="button"
           className="btn btn-danger item-delete-btn"
           onClick={onRemove}
           title="Remove item"
+          aria-label="Remove item"
         >
           <svg
             width="14"
@@ -295,9 +181,109 @@ export function ItemRow({
         </button>
       </div>
 
+      {/* Numeric Inputs Grid (Desktop row / Mobile responsive grid) */}
+      <div className="item-numeric-grid">
+        {/* Total Qty */}
+        <div className="input-block qty-block">
+          <div className="qty-input-group">
+            <input
+              className="input"
+              type="number"
+              min="0"
+              step="any"
+              placeholder="Qty"
+              value={item.totalQty || ""}
+              onChange={(e) => updateField("totalQty", e.target.value)}
+              onFocus={(e) => e.target.select()}
+              title="Total servings/quantity of this item"
+            />
+            {canSplit && (
+              <button
+                type="button"
+                className="btn btn-ghost split-x-btn"
+                onClick={handleSplit}
+                title={`Split into ${Math.round(item.totalQty)} individual items`}
+              >
+                Split x{Math.round(item.totalQty)}
+              </button>
+            )}
+          </div>
+          <div className="input-label">qty</div>
+        </div>
+
+        {/* Unit Without VAT */}
+        <div className="input-block price-block">
+          <div className="input-with-symbol">
+            <span className="input-symbol">Rs</span>
+            <input
+              className="input"
+              type="number"
+              min="0"
+              step="any"
+              placeholder="0.00"
+              value={withoutVatDisplay}
+              onChange={(e) => handleWithoutVatChange(e.target.value)}
+              onFocus={(e) => e.target.select()}
+              style={{ paddingLeft: 26 }}
+              title="Unit price without VAT (e.g. 100)"
+            />
+          </div>
+          <div className="input-label">Unit (No VAT)</div>
+        </div>
+
+        {/* Unit With VAT (13%) */}
+        <div className="input-block price-block">
+          <div className="input-with-symbol">
+            <span className="input-symbol teal">Rs</span>
+            <input
+              className="input"
+              type="number"
+              min="0"
+              step="any"
+              placeholder="0.00"
+              value={withVatDisplay}
+              onChange={(e) => handleWithVatChange(e.target.value)}
+              onFocus={(e) => e.target.select()}
+              style={{
+                paddingLeft: 26,
+                borderColor:
+                  item.price > 0 ? "rgba(20, 184, 166, 0.4)" : undefined,
+              }}
+              title="Unit price with 13% VAT (e.g. 113)"
+            />
+          </div>
+          <div className="input-label teal">Unit (13% VAT)</div>
+        </div>
+
+        {/* Total Actual Price */}
+        <div className="input-block price-block total-price-block">
+          <div className="input-with-symbol">
+            <span className="input-symbol emerald">Rs</span>
+            <input
+              className="input"
+              type="number"
+              min="0"
+              step="any"
+              placeholder="0.00"
+              value={totalPriceDisplay}
+              onChange={(e) => handleTotalPriceChange(e.target.value)}
+              onFocus={(e) => e.target.select()}
+              style={{
+                paddingLeft: 26,
+                fontWeight: 700,
+                borderColor: "rgba(16, 185, 129, 0.45)",
+                color: "var(--accent-emerald)",
+              }}
+              title="Total actual price for this item (Unit price × Qty)"
+            />
+          </div>
+          <div className="input-label emerald">Total Price</div>
+        </div>
+      </div>
+
       {/* Friends Assignment Pills */}
       {friends.length > 0 && (
-        <div style={{ marginTop: 14 }}>
+        <div className="item-friends-section">
           <div className="friend-pills-wrap">
             {friends.map((f) => {
               const share = item.shares.find((s) => s.friendId === f.id);
@@ -332,7 +318,7 @@ export function ItemRow({
                       onClick={(e) => e.stopPropagation()}
                       title={`How many did ${f.name} have? (e.g. 0.5, 1, 2)`}
                       placeholder="0"
-                      style={{ width: 60 }}
+                      style={{ width: 56 }}
                     />
                   )}
                 </div>
@@ -341,7 +327,7 @@ export function ItemRow({
           </div>
 
           {showFractions && mismatch && (
-            <div className="warning-banner" style={{ marginBottom: 12 }}>
+            <div className="warning-banner">
               Assigned {assignedTotal.toFixed(2)} but item total is{" "}
               {item.totalQty}. Difference:{" "}
               {assignedTotal - item.totalQty > 0 ? "+" : ""}
@@ -425,7 +411,7 @@ export function ItemRow({
                   });
                 }}
               >
-                Add all friends
+                Add all
               </button>
 
               {item.shares.length > 0 && (
@@ -434,7 +420,7 @@ export function ItemRow({
                   className="btn btn-ghost btn-sm"
                   onClick={() => onChange({ ...item, shares: [] })}
                 >
-                  Remove all friends
+                  Remove all
                 </button>
               )}
             </div>

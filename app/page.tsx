@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef, useCallback } from "react";
 import { BillItem, FeeConfig, Friend, SavedBill } from "./types";
 import {
   downloadJSON,
+  formatCurrency,
   getItemTotalPrice,
   personItemCost,
   sanitizeFee,
@@ -37,6 +38,9 @@ export default function BillSplitPage() {
   });
   const [tax, setTax] = useState<FeeConfig>({ type: "percent", value: 0 });
   const [tip, setTip] = useState<FeeConfig>({ type: "percent", value: 0 });
+
+  // Mobile View Navigation State ("items" | "friends" | "summary" | "all")
+  const [mobileTab, setMobileTab] = useState<"items" | "friends" | "summary" | "all">("items");
 
   // Persistence state
   const [isHydrated, setIsHydrated] = useState(false);
@@ -478,53 +482,91 @@ export default function BillSplitPage() {
         onExportPdf={handleExportPDF}
       />
 
+      {/* Mobile Tab Navigation (< 1024px) */}
+      <nav className="mobile-tab-nav" aria-label="Mobile section navigation">
+        <button
+          type="button"
+          className={`btn mobile-tab-btn ${mobileTab === "items" ? "btn-primary" : "btn-ghost"}`}
+          onClick={() => setMobileTab("items")}
+        >
+          🛒 Items ({items.length})
+        </button>
+        <button
+          type="button"
+          className={`btn mobile-tab-btn ${mobileTab === "friends" ? "btn-primary" : "btn-ghost"}`}
+          onClick={() => setMobileTab("friends")}
+        >
+          👥 Friends ({friends.length})
+        </button>
+        <button
+          type="button"
+          className={`btn mobile-tab-btn ${mobileTab === "summary" ? "btn-primary" : "btn-ghost"}`}
+          onClick={() => setMobileTab("summary")}
+        >
+          🧮 Summary ({formatCurrency(grandTotal)})
+        </button>
+        <button
+          type="button"
+          className={`btn mobile-tab-btn ${mobileTab === "all" ? "btn-primary" : "btn-ghost"}`}
+          onClick={() => setMobileTab("all")}
+        >
+          📋 All
+        </button>
+      </nav>
+
       {/* Main Grid */}
       <div className="main-grid">
-        {/* LEFT: Friends Section */}
-        <FriendsSection
-          friends={friends}
-          items={items}
-          personTotals={personTotals}
-          newFriendName={newFriendName}
-          setNewFriendName={setNewFriendName}
-          onAddFriend={addFriend}
-          onRemoveFriend={removeFriend}
-        />
+        {/* Friends Section */}
+        <div className={mobileTab !== "all" && mobileTab !== "friends" ? "mobile-hidden" : ""}>
+          <FriendsSection
+            friends={friends}
+            items={items}
+            personTotals={personTotals}
+            newFriendName={newFriendName}
+            setNewFriendName={setNewFriendName}
+            onAddFriend={addFriend}
+            onRemoveFriend={removeFriend}
+          />
+        </div>
 
-        {/* CENTER: Items Section */}
-        <ItemsSection
-          items={items}
-          friends={friends}
-          setItems={setItems}
-          onAddItem={addItem}
-        />
+        {/* Items Section */}
+        <div className={mobileTab !== "all" && mobileTab !== "items" ? "mobile-hidden" : ""}>
+          <ItemsSection
+            items={items}
+            friends={friends}
+            setItems={setItems}
+            onAddItem={addItem}
+          />
+        </div>
 
-        {/* RIGHT: Bill Totals Sidebar */}
-        <BillTotalsCard
-          itemsCount={items.length}
-          subtotal={subtotal}
-          flatFee={flatFee}
-          setFlatFee={setFlatFee}
-          tax={tax}
-          setTax={setTax}
-          discount={discount}
-          setDiscount={setDiscount}
-          tip={tip}
-          setTip={setTip}
-          feeAmount={feeAmount}
-          taxAmount={taxAmount}
-          discountAmount={discountAmount}
-          tipAmount={tipAmount}
-          grandTotal={grandTotal}
-          hasFriends={friends.length > 0}
-          exporting={exporting}
-          onOpenJsonModal={() => {
-            setImportStatusMessage(null);
-            setShowJsonModal(true);
-          }}
-          onExportImage={handleExportImage}
-          onExportPdf={handleExportPDF}
-        />
+        {/* Bill Totals Sidebar */}
+        <div className={mobileTab !== "all" && mobileTab !== "summary" ? "mobile-hidden" : ""}>
+          <BillTotalsCard
+            itemsCount={items.length}
+            subtotal={subtotal}
+            flatFee={flatFee}
+            setFlatFee={setFlatFee}
+            tax={tax}
+            setTax={setTax}
+            discount={discount}
+            setDiscount={setDiscount}
+            tip={tip}
+            setTip={setTip}
+            feeAmount={feeAmount}
+            taxAmount={taxAmount}
+            discountAmount={discountAmount}
+            tipAmount={tipAmount}
+            grandTotal={grandTotal}
+            hasFriends={friends.length > 0}
+            exporting={exporting}
+            onOpenJsonModal={() => {
+              setImportStatusMessage(null);
+              setShowJsonModal(true);
+            }}
+            onExportImage={handleExportImage}
+            onExportPdf={handleExportPDF}
+          />
+        </div>
       </div>
 
       {/* Saved Bills History Modal */}

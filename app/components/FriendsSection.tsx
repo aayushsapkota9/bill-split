@@ -59,15 +59,14 @@ export function FriendsSection({
             <line x1="12" y1="5" x2="12" y2="19" />
             <line x1="5" y1="12" x2="19" y2="12" />
           </svg>
+          <span className="mobile-only-inline">Add</span>
         </button>
       </div>
 
       {friends.length === 0 && (
         <div className="empty-friends-card">
           <div style={{ fontSize: 28, marginBottom: 8 }}>🤝</div>
-          Add friends to
-          <br />
-          start splitting
+          Add friends to start splitting items
         </div>
       )}
 
@@ -89,6 +88,7 @@ export function FriendsSection({
                   onClick={() => onRemoveFriend(f.id)}
                   title={`Remove ${f.name}`}
                   className="friend-remove-btn"
+                  aria-label={`Remove ${f.name}`}
                 >
                   ✕
                 </button>
