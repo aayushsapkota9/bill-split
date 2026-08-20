@@ -181,13 +181,13 @@ export function ItemRow({
         </button>
       </div>
 
-      {/* Numeric Inputs Grid (Desktop row / Mobile responsive grid) */}
+      {/* Numeric Inputs Grid */}
       <div className="item-numeric-grid">
-        {/* Total Qty */}
+        {/* Total Qty - HIGHLIGHTED */}
         <div className="input-block qty-block">
           <div className="qty-input-group">
             <input
-              className="input"
+              className="input qty-highlight-input"
               type="number"
               min="0"
               step="any"
@@ -196,6 +196,10 @@ export function ItemRow({
               onChange={(e) => updateField("totalQty", e.target.value)}
               onFocus={(e) => e.target.select()}
               title="Total servings/quantity of this item"
+              style={{
+                borderColor: "rgba(245, 158, 11, 0.45)",
+                fontWeight: 600,
+              }}
             />
             {canSplit && (
               <button
@@ -208,10 +212,44 @@ export function ItemRow({
               </button>
             )}
           </div>
-          <div className="input-label">qty</div>
+          <div className="input-label" style={{ color: "var(--accent-amber)", fontWeight: 600 }}>
+            qty
+          </div>
         </div>
 
-        {/* Unit Without VAT */}
+        {/* Unit Without VAT (Price) - HIGHLIGHTED */}
+        <div className="input-block price-block">
+          <div className="input-with-symbol">
+            <span
+              className="input-symbol"
+              style={{ color: "var(--accent-emerald)", fontWeight: 700 }}
+            >
+              Rs
+            </span>
+            <input
+              className="input price-highlight-input"
+              type="number"
+              min="0"
+              step="any"
+              placeholder="0.00"
+              value={withoutVatDisplay}
+              onChange={(e) => handleWithoutVatChange(e.target.value)}
+              onFocus={(e) => e.target.select()}
+              style={{
+                paddingLeft: 26,
+                borderColor: "rgba(16, 185, 129, 0.45)",
+                fontWeight: 600,
+                color: "var(--accent-emerald)",
+              }}
+              title="Unit price without VAT (e.g. 100)"
+            />
+          </div>
+          <div className="input-label" style={{ color: "var(--accent-emerald)", fontWeight: 600 }}>
+            Price (No VAT)
+          </div>
+        </div>
+
+        {/* Unit With VAT (13%) - NON-HIGHLIGHTED */}
         <div className="input-block price-block">
           <div className="input-with-symbol">
             <span className="input-symbol">Rs</span>
@@ -221,44 +259,20 @@ export function ItemRow({
               min="0"
               step="any"
               placeholder="0.00"
-              value={withoutVatDisplay}
-              onChange={(e) => handleWithoutVatChange(e.target.value)}
-              onFocus={(e) => e.target.select()}
-              style={{ paddingLeft: 26 }}
-              title="Unit price without VAT (e.g. 100)"
-            />
-          </div>
-          <div className="input-label">Unit (No VAT)</div>
-        </div>
-
-        {/* Unit With VAT (13%) */}
-        <div className="input-block price-block">
-          <div className="input-with-symbol">
-            <span className="input-symbol teal">Rs</span>
-            <input
-              className="input"
-              type="number"
-              min="0"
-              step="any"
-              placeholder="0.00"
               value={withVatDisplay}
               onChange={(e) => handleWithVatChange(e.target.value)}
               onFocus={(e) => e.target.select()}
-              style={{
-                paddingLeft: 26,
-                borderColor:
-                  item.price > 0 ? "rgba(20, 184, 166, 0.4)" : undefined,
-              }}
+              style={{ paddingLeft: 26 }}
               title="Unit price with 13% VAT (e.g. 113)"
             />
           </div>
-          <div className="input-label teal">Unit (13% VAT)</div>
+          <div className="input-label">Unit (13% VAT)</div>
         </div>
 
-        {/* Total Actual Price */}
+        {/* Total Actual Price - NON-HIGHLIGHTED */}
         <div className="input-block price-block total-price-block">
           <div className="input-with-symbol">
-            <span className="input-symbol emerald">Rs</span>
+            <span className="input-symbol">Rs</span>
             <input
               className="input"
               type="number"
@@ -268,16 +282,11 @@ export function ItemRow({
               value={totalPriceDisplay}
               onChange={(e) => handleTotalPriceChange(e.target.value)}
               onFocus={(e) => e.target.select()}
-              style={{
-                paddingLeft: 26,
-                fontWeight: 700,
-                borderColor: "rgba(16, 185, 129, 0.45)",
-                color: "var(--accent-emerald)",
-              }}
+              style={{ paddingLeft: 26 }}
               title="Total actual price for this item (Unit price × Qty)"
             />
           </div>
-          <div className="input-label emerald">Total Price</div>
+          <div className="input-label">Total Price</div>
         </div>
       </div>
 

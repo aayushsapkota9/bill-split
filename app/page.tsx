@@ -517,7 +517,10 @@ export default function BillSplitPage() {
       {/* Main Grid */}
       <div className="main-grid">
         {/* Friends Section */}
-        <div className={mobileTab !== "all" && mobileTab !== "friends" ? "mobile-hidden" : ""}>
+        <div
+          className={`section-wrapper ${mobileTab !== "all" && mobileTab !== "friends" ? "mobile-hidden" : ""}`}
+          style={{ width: "100%" }}
+        >
           <FriendsSection
             friends={friends}
             items={items}
@@ -530,7 +533,10 @@ export default function BillSplitPage() {
         </div>
 
         {/* Items Section */}
-        <div className={mobileTab !== "all" && mobileTab !== "items" ? "mobile-hidden" : ""}>
+        <div
+          className={`section-wrapper ${mobileTab !== "all" && mobileTab !== "items" ? "mobile-hidden" : ""}`}
+          style={{ width: "100%" }}
+        >
           <ItemsSection
             items={items}
             friends={friends}
@@ -540,7 +546,10 @@ export default function BillSplitPage() {
         </div>
 
         {/* Bill Totals Sidebar */}
-        <div className={mobileTab !== "all" && mobileTab !== "summary" ? "mobile-hidden" : ""}>
+        <div
+          className={`section-wrapper ${mobileTab !== "all" && mobileTab !== "summary" ? "mobile-hidden" : ""}`}
+          style={{ width: "100%" }}
+        >
           <BillTotalsCard
             itemsCount={items.length}
             subtotal={subtotal}

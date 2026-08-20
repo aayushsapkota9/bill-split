@@ -22,7 +22,7 @@ export function FriendsSection({
   onRemoveFriend,
 }: FriendsSectionProps) {
   return (
-    <aside className="friends-sidebar">
+    <aside className="friends-sidebar" style={{ width: "100%" }}>
       <div className="section-header">
         <h2 className="section-title">
           <span style={{ fontSize: 18 }}>👥</span> Friends
@@ -32,7 +32,8 @@ export function FriendsSection({
         </h2>
       </div>
 
-      <div className="add-friend-form">
+      {/* Add Friend Form */}
+      <div className="add-friend-form" style={{ width: "100%" }}>
         <input
           id="add-friend-input"
           className="input"
@@ -40,6 +41,7 @@ export function FriendsSection({
           value={newFriendName}
           onChange={(e) => setNewFriendName(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && onAddFriend()}
+          style={{ flex: 1 }}
         />
         <button
           type="button"
@@ -59,25 +61,28 @@ export function FriendsSection({
             <line x1="12" y1="5" x2="12" y2="19" />
             <line x1="5" y1="12" x2="19" y2="12" />
           </svg>
-          <span className="mobile-only-inline">Add</span>
+          <span>Add</span>
         </button>
       </div>
 
       {friends.length === 0 && (
         <div className="empty-friends-card">
           <div style={{ fontSize: 28, marginBottom: 8 }}>🤝</div>
-          Add friends to start splitting items
+          Add friends to
+          <br />
+          start splitting
         </div>
       )}
 
-      <div className="friends-list">
+      {/* Friends Cards List */}
+      <div className="friends-list" style={{ width: "100%" }}>
         {friends.map((f) => {
           const total = personTotals[f.id] || 0;
           const myItems = items.filter((item) =>
             item.shares.some((s) => s.friendId === f.id),
           );
           return (
-            <div key={f.id} className="friend-card">
+            <div key={f.id} className="friend-card" style={{ width: "100%" }}>
               {/* Header: Underlined Name + Close button */}
               <div className="friend-card-header">
                 <h3 className="friend-card-name">
@@ -115,7 +120,7 @@ export function FriendsSection({
                             {item.name || "Unnamed"}
                           </span>
                           {shareText && (
-                            <span className="friend-item-share">
+                            <span style={{ fontSize: 11, color: "var(--text-muted)", marginLeft: 4 }}>
                               ({shareText})
                             </span>
                           )}

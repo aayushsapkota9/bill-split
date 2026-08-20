@@ -278,12 +278,11 @@ body {
   position: sticky;
   top: 62px;
   z-index: 40;
-  background: rgba(15, 17, 23, 0.95);
+  background: rgba(15, 17, 23, 0.96);
   backdrop-filter: blur(12px);
   padding: 8px 12px;
   border-bottom: 1px solid var(--border);
   gap: 6px;
-  margin-bottom: 12px;
   overflow-x: auto;
 }
 
@@ -295,10 +294,6 @@ body {
   border-radius: 8px;
   justify-content: center;
   white-space: nowrap;
-}
-
-.mobile-only-inline {
-  display: none;
 }
 
 /* ==========================================================================
@@ -314,19 +309,26 @@ body {
   align-items: start;
 }
 
+.section-wrapper {
+  width: 100%;
+}
+
 .friends-sidebar {
   position: sticky;
   top: 80px;
+  width: 100%;
 }
 
 .items-section {
   padding: 0 4px;
   min-height: 60vh;
+  width: 100%;
 }
 
 .summary-sidebar {
   position: sticky;
   top: 80px;
+  width: 100%;
 }
 
 /* Section Header */
@@ -365,16 +367,19 @@ body {
   border: 1px solid var(--border);
 }
 
-/* Friends section styling */
+/* ==========================================================================
+   Friends Section & Cards
+   ========================================================================== */
 .add-friend-form {
   display: flex;
   gap: 6px;
-  margin-bottom: 12px;
+  margin-bottom: 14px;
+  width: 100%;
 }
 
 .add-friend-btn {
   flex-shrink: 0;
-  padding: 8px 12px;
+  padding: 8px 14px;
 }
 
 .empty-friends-card,
@@ -386,21 +391,24 @@ body {
   background: var(--bg-card);
   border: 1px dashed var(--border);
   border-radius: 12px;
+  width: 100%;
 }
 
 .friends-list {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
+  width: 100%;
 }
 
 .friend-card {
   background: var(--bg-secondary);
   border: 1px solid var(--border);
   border-radius: 10px;
-  padding: 12px 14px;
+  padding: 14px 16px;
   transition: all 0.15s ease;
   width: 100%;
+  box-sizing: border-box;
 }
 .friend-card:hover {
   border-color: var(--border-hover);
@@ -415,15 +423,12 @@ body {
 
 .friend-card-name {
   font-weight: 800;
-  font-size: 15.5px;
+  font-size: 16px;
   color: var(--text-primary);
   text-decoration: underline;
   text-underline-offset: 3px;
   letter-spacing: -0.01em;
   margin: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .friend-remove-btn {
@@ -449,12 +454,12 @@ body {
 .friend-items-breakdown {
   display: flex;
   flex-direction: column;
-  gap: 3px;
-  margin-bottom: 6px;
+  gap: 4px;
+  margin-bottom: 8px;
 }
 
 .friend-item-line {
-  font-size: 11.5px;
+  font-size: 12px;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -469,17 +474,11 @@ body {
   flex: 1;
 }
 
-.friend-item-share {
-  font-size: 11px;
-  color: var(--text-muted);
-  margin-left: 4px;
-}
-
 .friend-item-cost {
   color: var(--text-primary);
   font-weight: 500;
   white-space: nowrap;
-  font-size: 11.5px;
+  font-size: 12px;
 }
 
 .friend-card-total-row {
@@ -487,18 +486,18 @@ body {
   justify-content: space-between;
   align-items: center;
   border-top: 1px solid var(--border);
-  padding-top: 6px;
+  padding-top: 8px;
   margin-top: 4px;
 }
 
 .friend-card-total-label {
   font-weight: 600;
-  font-size: 12px;
+  font-size: 13px;
   color: var(--text-secondary);
 }
 
 .friend-card-total-amount {
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 700;
   color: var(--accent-teal-light);
 }
@@ -514,6 +513,8 @@ body {
   margin-bottom: 12px;
   transition: border-color 0.2s;
   animation: fadeInUp 0.2s ease;
+  width: 100%;
+  box-sizing: border-box;
 }
 .item-row:hover {
   border-color: var(--border-hover);
@@ -598,8 +599,6 @@ body {
   font-weight: 600;
   pointer-events: none;
 }
-.input-symbol.teal { color: var(--accent-teal-light); }
-.input-symbol.emerald { color: var(--accent-emerald); font-weight: 700; }
 
 .input-label {
   font-size: 11px;
@@ -607,8 +606,6 @@ body {
   margin-top: 2px;
   padding-left: 2px;
 }
-.input-label.teal { color: var(--accent-teal-light); }
-.input-label.emerald { color: var(--accent-emerald); font-weight: 600; }
 
 .item-friends-section {
   margin-top: 14px;
@@ -706,6 +703,8 @@ body {
 .bill-totals-card {
   padding: 18px 20px;
   margin-bottom: 14px;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .total-row {
@@ -841,6 +840,8 @@ body {
   align-items: center;
   gap: 12px;
   flex-wrap: wrap;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .history-bill-info {
@@ -936,6 +937,8 @@ body {
   align-items: center;
   gap: 12px;
   flex-wrap: wrap;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .json-card-title {
@@ -970,6 +973,8 @@ body {
   text-align: center;
   cursor: pointer;
   transition: all 0.2s ease;
+  width: 100%;
+  box-sizing: border-box;
 }
 .json-dropzone.dragover {
   border-color: var(--accent-teal);
@@ -1061,10 +1066,6 @@ body {
     display: flex;
   }
 
-  .mobile-only-inline {
-    display: inline;
-  }
-
   /* Break the 3-column desktop grid into single document flow */
   .main-grid {
     display: flex;
@@ -1074,7 +1075,11 @@ body {
     width: 100%;
   }
 
-  /* CRITICAL: Sidebars MUST NOT be sticky on mobile or they overlap items! */
+  .section-wrapper {
+    width: 100% !important;
+  }
+
+  /* Sidebars MUST NOT be sticky on mobile */
   .friends-sidebar,
   .summary-sidebar,
   .items-section {
@@ -1097,18 +1102,15 @@ body {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 8px;
+    width: 100%;
   }
 
   .qty-block {
     grid-column: 1 / 2;
   }
 
-  .total-price-block {
+  .price-block:first-of-type {
     grid-column: 2 / 3;
-  }
-
-  .price-block:not(.total-price-block) {
-    grid-column: span 1;
   }
 
   .item-toolbar-actions {
