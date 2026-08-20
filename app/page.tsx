@@ -1626,117 +1626,23 @@ function FeeRow({
 export default function BillSplitPage() {
   const isLoadedRef = useRef(false);
 
-  const [billTitle, setBillTitle] = useState(() => {
-    if (typeof window !== "undefined") {
-      try {
-        const raw = localStorage.getItem("billsplit_current_draft");
-        if (raw) {
-          const parsed = JSON.parse(raw);
-          if (parsed?.billTitle !== undefined) return String(parsed.billTitle);
-        }
-      } catch {}
-    }
-    return "Dinner with Friends";
-  });
-
-  const [friends, setFriends] = useState<Friend[]>(() => {
-    if (typeof window !== "undefined") {
-      try {
-        const raw = localStorage.getItem("billsplit_current_draft");
-        if (raw) {
-          const parsed = JSON.parse(raw);
-          if (Array.isArray(parsed?.friends) && parsed.friends.length > 0) {
-            return sanitizeFriends(parsed.friends);
-          }
-        }
-      } catch {}
-    }
-    return [];
-  });
-
+  const [billTitle, setBillTitle] = useState("Dinner with Friends");
+  const [friends, setFriends] = useState<Friend[]>([]);
   const [newFriendName, setNewFriendName] = useState("");
-
-  const [items, setItems] = useState<BillItem[]>(() => {
-    if (typeof window !== "undefined") {
-      try {
-        const raw = localStorage.getItem("billsplit_current_draft");
-        if (raw) {
-          const parsed = JSON.parse(raw);
-          if (Array.isArray(parsed?.items) && parsed.items.length > 0) {
-            return sanitizeItems(parsed.items);
-          }
-        }
-      } catch {}
-    }
-    return [{ id: uid(), name: "", price: 0, totalQty: 1, shares: [] }];
+  const [items, setItems] = useState<BillItem[]>([
+    { id: uid(), name: "", price: 0, totalQty: 1, shares: [] },
+  ]);
+  const [flatFee, setFlatFee] = useState<FeeConfig>({ type: "flat", value: 0 });
+  const [discount, setDiscount] = useState<FeeConfig>({
+    type: "flat",
+    value: 0,
   });
-
-  const [flatFee, setFlatFee] = useState<FeeConfig>(() => {
-    if (typeof window !== "undefined") {
-      try {
-        const raw = localStorage.getItem("billsplit_current_draft");
-        if (raw) {
-          const parsed = JSON.parse(raw);
-          if (parsed?.flatFee) return sanitizeFee(parsed.flatFee, "flat");
-        }
-      } catch {}
-    }
-    return { type: "flat", value: 0 };
-  });
-
-  const [discount, setDiscount] = useState<FeeConfig>(() => {
-    if (typeof window !== "undefined") {
-      try {
-        const raw = localStorage.getItem("billsplit_current_draft");
-        if (raw) {
-          const parsed = JSON.parse(raw);
-          if (parsed?.discount) return sanitizeFee(parsed.discount, "flat");
-        }
-      } catch {}
-    }
-    return { type: "flat", value: 0 };
-  });
-
-  const [tax, setTax] = useState<FeeConfig>(() => {
-    if (typeof window !== "undefined") {
-      try {
-        const raw = localStorage.getItem("billsplit_current_draft");
-        if (raw) {
-          const parsed = JSON.parse(raw);
-          if (parsed?.tax) return sanitizeFee(parsed.tax, "percent");
-        }
-      } catch {}
-    }
-    return { type: "percent", value: 0 };
-  });
-
-  const [tip, setTip] = useState<FeeConfig>(() => {
-    if (typeof window !== "undefined") {
-      try {
-        const raw = localStorage.getItem("billsplit_current_draft");
-        if (raw) {
-          const parsed = JSON.parse(raw);
-          if (parsed?.tip) return sanitizeFee(parsed.tip, "percent");
-        }
-      } catch {}
-    }
-    return { type: "percent", value: 0 };
-  });
+  const [tax, setTax] = useState<FeeConfig>({ type: "percent", value: 0 });
+  const [tip, setTip] = useState<FeeConfig>({ type: "percent", value: 0 });
 
   // Persistence state
   const [isHydrated, setIsHydrated] = useState(false);
-  const [savedBills, setSavedBills] = useState<SavedBill[]>(() => {
-    if (typeof window !== "undefined") {
-      try {
-        const raw = localStorage.getItem("billsplit_saved_history");
-        if (raw) {
-          const parsed = JSON.parse(raw);
-          if (Array.isArray(parsed)) return sanitizeSavedBills(parsed);
-        }
-      } catch {}
-    }
-    return [];
-  });
+  const [savedBills, setSavedBills] = useState<SavedBill[]>([]);
   const [showHistoryModal, setShowHistoryModal] = useState(false);
   const [saveStatus, setSaveStatus] = useState<"saved" | "saving">("saved");
 
@@ -2339,6 +2245,7 @@ export default function BillSplitPage() {
             className="btn btn-ghost"
             onClick={() => setShowHistoryModal(true)}
             title="View previously saved bills"
+            suppressHydrationWarning
           >
             <svg
               width="14"
@@ -2351,7 +2258,7 @@ export default function BillSplitPage() {
               <circle cx="12" cy="12" r="10" />
               <polyline points="12 6 12 12 16 14" />
             </svg>
-            Saved Bills ({savedBills.length})
+            Saved Bills ({isHydrated ? savedBills.length : 0})
           </button>
           <button
             className="btn btn-ghost"
