@@ -119,6 +119,7 @@ export function sanitizeItems(raw: unknown): BillItem[] {
       typeof i?.totalQty === "number" && !isNaN(i.totalQty) && i.totalQty > 0
         ? i.totalQty
         : 1,
+    hasVat: (i as any)?.hasVat !== false,
     shares: Array.isArray(i?.shares)
       ? i.shares
           .map((s: { friendId?: string; qty?: number }) => ({
@@ -156,6 +157,7 @@ export function sanitizeSavedBills(list: unknown): SavedBill[] {
         : new Date().toLocaleDateString("en-IN"),
     friends: sanitizeFriends(b?.friends),
     items: sanitizeItems(b?.items),
+    isVatBill: (b as any)?.isVatBill !== false,
     flatFee: sanitizeFee(b?.flatFee, "flat"),
     discount: sanitizeFee(b?.discount, "flat"),
     tax: sanitizeFee(b?.tax, "percent"),

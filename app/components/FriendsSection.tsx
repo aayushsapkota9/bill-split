@@ -6,6 +6,11 @@ interface FriendsSectionProps {
   friends: Friend[];
   items: BillItem[];
   personTotals: Record<string, number>;
+  personSubtotals?: Record<string, number>;
+  feeAmount?: number;
+  taxAmount?: number;
+  discountAmount?: number;
+  tipAmount?: number;
   newFriendName: string;
   setNewFriendName: (name: string) => void;
   onAddFriend: () => void;
@@ -16,6 +21,11 @@ export function FriendsSection({
   friends,
   items,
   personTotals,
+  personSubtotals = {},
+  feeAmount = 0,
+  taxAmount = 0,
+  discountAmount = 0,
+  tipAmount = 0,
   newFriendName,
   setNewFriendName,
   onAddFriend,
@@ -23,6 +33,11 @@ export function FriendsSection({
 }: FriendsSectionProps) {
   const [hasError, setHasError] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  const totalSubtotal = Object.values(personSubtotals).reduce(
+    (s, v) => s + v,
+    0,
+  );
 
   function handleAdd() {
     if (!newFriendName.trim()) {
@@ -103,9 +118,23 @@ export function FriendsSection({
       <div className="friends-list" style={{ width: "100%" }}>
         {friends.map((f) => {
           const total = personTotals[f.id] || 0;
+          const mySubtotal = personSubtotals[f.id] || 0;
+          const ratio =
+            totalSubtotal > 0
+              ? mySubtotal / totalSubtotal
+              : 1 / Math.max(friends.length, 1);
+
+          const myFee = feeAmount * ratio;
+          const myTax = taxAmount * ratio;
+          const myDiscount = discountAmount * ratio;
+          const myTip = tipAmount * ratio;
+          const hasExtras =
+            myFee > 0 || myTax > 0 || myDiscount > 0 || myTip > 0;
+
           const myItems = items.filter((item) =>
             item.shares.some((s) => s.friendId === f.id),
           );
+
           return (
             <div key={f.id} className="friend-card" style={{ width: "100%" }}>
               {/* Header: Underlined Name + Close button */}
@@ -156,6 +185,67 @@ export function FriendsSection({
                       </div>
                     );
                   })}
+                </div>
+              )}
+
+              {/* Fees & Taxes Breakdown if applied */}
+              {hasExtras && (
+                <div
+                  className="friend-extras-breakdown"
+                  style={{
+                    borderTop: "1px dashed var(--border)",
+                    paddingTop: 5,
+                    marginTop: 4,
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 2.5,
+                  }}
+                >
+                  {myItems.length > 1 && (
+                    <div
+                      className="friend-item-line"
+                      style={{ color: "var(--text-muted)", fontSize: 11 }}
+                    >
+                      <span>Subtotal</span>
+                      <span>{formatCurrency(mySubtotal)}</span>
+                    </div>
+                  )}
+                  {myFee > 0 && (
+                    <div
+                      className="friend-item-line"
+                      style={{ color: "var(--text-secondary)", fontSize: 11 }}
+                    >
+                      <span>+ Fees</span>
+                      <span>+{formatCurrency(myFee)}</span>
+                    </div>
+                  )}
+                  {myTax > 0 && (
+                    <div
+                      className="friend-item-line"
+                      style={{ color: "var(--text-secondary)", fontSize: 11 }}
+                    >
+                      <span>+ Tax</span>
+                      <span>+{formatCurrency(myTax)}</span>
+                    </div>
+                  )}
+                  {myDiscount > 0 && (
+                    <div
+                      className="friend-item-line"
+                      style={{ color: "var(--accent-emerald)", fontSize: 11 }}
+                    >
+                      <span>- Discount</span>
+                      <span>-{formatCurrency(myDiscount)}</span>
+                    </div>
+                  )}
+                  {myTip > 0 && (
+                    <div
+                      className="friend-item-line"
+                      style={{ color: "var(--text-secondary)", fontSize: 11 }}
+                    >
+                      <span>+ Tip</span>
+                      <span>+{formatCurrency(myTip)}</span>
+                    </div>
+                  )}
                 </div>
               )}
 

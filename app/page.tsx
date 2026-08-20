@@ -34,6 +34,7 @@ export default function BillSplitPage() {
   const [items, setItems] = useState<BillItem[]>([
     { id: uid(), name: "", price: 0, totalQty: 1, shares: [] },
   ]);
+  const [isVatBill, setIsVatBill] = useState(true);
   const [flatFee, setFlatFee] = useState<FeeConfig>({ type: "flat", value: 0 });
   const [discount, setDiscount] = useState<FeeConfig>({
     type: "flat",
@@ -102,6 +103,8 @@ export default function BillSplitPage() {
           setFriends(sanitizeFriends(parsed.friends));
         if (Array.isArray(parsed.items) && parsed.items.length > 0)
           setItems(sanitizeItems(parsed.items));
+        if (parsed.isVatBill !== undefined)
+          setIsVatBill(Boolean(parsed.isVatBill));
         if (parsed.flatFee) setFlatFee(sanitizeFee(parsed.flatFee, "flat"));
         if (parsed.discount) setDiscount(sanitizeFee(parsed.discount, "flat"));
         if (parsed.tax) setTax(sanitizeFee(parsed.tax, "percent"));
@@ -131,6 +134,7 @@ export default function BillSplitPage() {
           billTitle,
           friends,
           items,
+          isVatBill,
           flatFee,
           discount,
           tax,
@@ -144,7 +148,7 @@ export default function BillSplitPage() {
     }, 300);
 
     return () => clearTimeout(timeout);
-  }, [billTitle, friends, items, flatFee, discount, tax, tip, isHydrated]);
+  }, [billTitle, friends, items, isVatBill, flatFee, discount, tax, tip, isHydrated]);
 
   // ─── Computed totals ───
   const subtotal = items.reduce((s, i) => s + getItemTotalPrice(i), 0);
@@ -214,6 +218,26 @@ export default function BillSplitPage() {
     ]);
   }
 
+  function handleToggleVatBill(enable: boolean) {
+    if (enable === isVatBill) return;
+    setIsVatBill(enable);
+    if (enable) {
+      setItems((prev) =>
+        prev.map((item) => ({
+          ...item,
+          price: item.price > 0 ? Math.round(item.price * 1.13 * 100) / 100 : 0,
+        })),
+      );
+    } else {
+      setItems((prev) =>
+        prev.map((item) => ({
+          ...item,
+          price: item.price > 0 ? Number((item.price / 1.13).toFixed(2)) : 0,
+        })),
+      );
+    }
+  }
+
   // ─── Save snapshot to History ───
   function saveToHistory() {
     const newBill: SavedBill = {
@@ -228,6 +252,7 @@ export default function BillSplitPage() {
       }),
       friends,
       items,
+      isVatBill,
       flatFee,
       discount,
       tax,
@@ -244,6 +269,7 @@ export default function BillSplitPage() {
     setBillTitle(bill.title);
     setFriends(bill.friends);
     setItems(bill.items);
+    setIsVatBill(bill.isVatBill !== false);
     setFlatFee(bill.flatFee);
     setDiscount(bill.discount);
     setTax(bill.tax);
@@ -272,18 +298,19 @@ export default function BillSplitPage() {
     setConfirmModalState({
       isOpen: true,
       title: "Start New Bill?",
-      message: "Are you sure you want to clear current items and start fresh? If you need this bill, save it first.",
+      message: "Are you sure you want to clear current items and start a new bill? Your added friends will be preserved.",
       confirmVariant: "amber",
       confirmText: "Start Fresh",
       onConfirm: () => {
         setBillTitle("Dinner with Friends");
-        setFriends([]);
+        // Keep friends list intact; reset only items and fees
         setItems([{ id: uid(), name: "", price: 0, totalQty: 1, shares: [] }]);
+        setIsVatBill(true);
         setFlatFee({ type: "flat", value: 0 });
         setDiscount({ type: "flat", value: 0 });
         setTax({ type: "percent", value: 0 });
         setTip({ type: "percent", value: 0 });
-        showToast("Started a fresh bill", "info");
+        showToast("Started a new bill (friends kept)", "info");
       },
     });
   }
@@ -298,6 +325,7 @@ export default function BillSplitPage() {
         title: billTitle.trim() || "Untitled Bill",
         friends,
         items,
+        isVatBill,
         flatFee,
         discount,
         tax,
@@ -329,6 +357,7 @@ export default function BillSplitPage() {
 
       if (Array.isArray(billData.friends)) setFriends(sanitizeFriends(billData.friends));
       if (Array.isArray(billData.items)) setItems(sanitizeItems(billData.items));
+      if (billData.isVatBill !== undefined) setIsVatBill(Boolean(billData.isVatBill));
       if (billData.flatFee) setFlatFee(sanitizeFee(billData.flatFee, "flat"));
       if (billData.discount) setDiscount(sanitizeFee(billData.discount, "flat"));
       if (billData.tax) setTax(sanitizeFee(billData.tax, "percent"));
@@ -430,6 +459,11 @@ export default function BillSplitPage() {
             friends={friends}
             items={items}
             personTotals={personTotals}
+            personSubtotals={personSubtotals}
+            feeAmount={feeAmount}
+            taxAmount={taxAmount}
+            discountAmount={discountAmount}
+            tipAmount={tipAmount}
             newFriendName={newFriendName}
             setNewFriendName={setNewFriendName}
             onAddFriend={addFriend}
@@ -445,6 +479,8 @@ export default function BillSplitPage() {
           <ItemsSection
             items={items}
             friends={friends}
+            isVatBill={isVatBill}
+            onToggleVatBill={handleToggleVatBill}
             setItems={setItems}
             onAddItem={addItem}
           />

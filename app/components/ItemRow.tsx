@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { BillItem, Friend, ItemShare } from "../types";
 import { uid } from "../lib/utils";
 import { SplitItemModal } from "./SplitItemModal";
@@ -6,6 +6,10 @@ import { SplitItemModal } from "./SplitItemModal";
 export interface ItemRowProps {
   item: BillItem;
   friends: Friend[];
+  isVatBill: boolean;
+  autoFocusName?: boolean;
+  nameInputRefCallback?: (el: HTMLInputElement | null) => void;
+  onRequestNextItem?: () => void;
   onChange: (updated: BillItem) => void;
   onRemove: () => void;
   onDuplicate: () => void;
@@ -25,6 +29,10 @@ function distributeEqualShares(
 export function ItemRow({
   item,
   friends,
+  isVatBill,
+  autoFocusName,
+  nameInputRefCallback,
+  onRequestNextItem,
   onChange,
   onRemove,
   onDuplicate,
@@ -37,6 +45,17 @@ export function ItemRow({
   });
   const [showSplitModal, setShowSplitModal] = useState(false);
   const [rawInputs, setRawInputs] = useState<Record<string, string>>({});
+
+  const nameInputRef = useRef<HTMLInputElement | null>(null);
+  const qtyInputRef = useRef<HTMLInputElement | null>(null);
+  const priceInputRef = useRef<HTMLInputElement | null>(null);
+
+  useEffect(() => {
+    if (autoFocusName && nameInputRef.current) {
+      nameInputRef.current.focus();
+      nameInputRef.current.select();
+    }
+  }, [autoFocusName]);
 
   function handleSplitConfirm(pieces: number) {
     const qtyPerPiece =
@@ -61,16 +80,21 @@ export function ItemRow({
 
   function toggleFriend(fid: string) {
     const existing = item.shares.find((s) => s.friendId === fid);
-    let newShares: ItemShare[];
+    let selectedFriendIds: string[];
     if (existing) {
-      newShares = item.shares.filter((s) => s.friendId !== fid);
+      selectedFriendIds = item.shares
+        .filter((s) => s.friendId !== fid)
+        .map((s) => s.friendId);
     } else {
-      newShares = [...item.shares, { friendId: fid, qty: 1 }];
+      selectedFriendIds = [...item.shares.map((s) => s.friendId), fid];
     }
 
-    if (!showCustomPortions) {
-      newShares = distributeEqualShares(newShares, item.totalQty);
-    }
+    const newShares = distributeEqualShares(
+      selectedFriendIds.map((id) => ({ friendId: id, qty: 1 })),
+      item.totalQty,
+    );
+
+    setRawInputs({});
     onChange({ ...item, shares: newShares });
   }
 
@@ -136,6 +160,17 @@ export function ItemRow({
     }
   }
 
+  function handleNonVatPriceChange(val: string) {
+    if (val === "") {
+      onChange({ ...item, price: 0 });
+      return;
+    }
+    const num = parseFloat(val);
+    if (!isNaN(num)) {
+      onChange({ ...item, price: num });
+    }
+  }
+
   function handleWithVatChange(val: string) {
     if (val === "") {
       onChange({ ...item, price: 0 });
@@ -163,6 +198,7 @@ export function ItemRow({
   const withoutVatDisplay =
     item.price > 0 ? Number((item.price / 1.13).toFixed(2)) : "";
   const withVatDisplay = item.price > 0 ? Number(item.price.toFixed(2)) : "";
+  const nonVatPriceDisplay = item.price > 0 ? Number(item.price.toFixed(2)) : "";
   const totalPriceDisplay =
     item.price > 0
       ? Number(
@@ -178,10 +214,23 @@ export function ItemRow({
       <div className="item-header-row">
         <div className="item-name-wrap">
           <input
+            ref={(el) => {
+              nameInputRef.current = el;
+              nameInputRefCallback?.(el);
+            }}
             className="input item-name-input"
             placeholder="Item name (e.g. Momos)"
             value={item.name}
             onChange={(e) => updateField("name", e.target.value)}
+            onFocus={(e) => e.target.select()}
+            enterKeyHint="next"
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                qtyInputRef.current?.focus();
+                qtyInputRef.current?.select();
+              }
+            }}
           />
           <div className="input-label">item name</div>
         </div>
@@ -226,11 +275,12 @@ export function ItemRow({
         </div>
       </div>
 
-      {/* Numeric Inputs Grid */}
-      <div className="item-numeric-grid">
+      {/* Numeric Inputs Grid (Fast Entry Navigation) */}
+      <div className={`item-numeric-grid ${!isVatBill ? "non-vat-grid" : ""}`}>
         {/* Total Qty - HIGHLIGHTED */}
         <div className="input-block qty-block">
           <input
+            ref={qtyInputRef}
             className="input qty-highlight-input"
             type="number"
             min="0"
@@ -239,6 +289,14 @@ export function ItemRow({
             value={item.totalQty || ""}
             onChange={(e) => updateField("totalQty", e.target.value)}
             onFocus={(e) => e.target.select()}
+            enterKeyHint="next"
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                priceInputRef.current?.focus();
+                priceInputRef.current?.select();
+              }
+            }}
             title="Total servings/quantity of this item"
             style={{
               borderColor: "rgba(245, 158, 11, 0.45)",
@@ -250,57 +308,109 @@ export function ItemRow({
           </div>
         </div>
 
-        {/* Unit Without VAT (Price) - HIGHLIGHTED */}
-        <div className="input-block price-block">
-          <div className="input-with-symbol">
-            <span
-              className="input-symbol"
-              style={{ color: "var(--accent-emerald)", fontWeight: 700 }}
-            >
-              Rs
-            </span>
-            <input
-              className="input price-highlight-input"
-              type="number"
-              min="0"
-              step="any"
-              placeholder="0.00"
-              value={withoutVatDisplay}
-              onChange={(e) => handleWithoutVatChange(e.target.value)}
-              onFocus={(e) => e.target.select()}
-              style={{
-                paddingLeft: 26,
-                borderColor: "rgba(16, 185, 129, 0.45)",
-                fontWeight: 600,
-                color: "var(--accent-emerald)",
-              }}
-              title="Unit price without VAT (e.g. 100)"
-            />
-          </div>
-          <div className="input-label" style={{ color: "var(--accent-emerald)", fontWeight: 600 }}>
-            Price (No VAT)
-          </div>
-        </div>
+        {/* 13% VAT Bill Mode */}
+        {isVatBill ? (
+          <>
+            <div className="input-block price-block">
+              <div className="input-with-symbol">
+                <span
+                  className="input-symbol"
+                  style={{ color: "var(--accent-emerald)", fontWeight: 700 }}
+                >
+                  Rs
+                </span>
+                <input
+                  ref={priceInputRef}
+                  className="input price-highlight-input"
+                  type="number"
+                  min="0"
+                  step="any"
+                  placeholder="0.00"
+                  value={withoutVatDisplay}
+                  onChange={(e) => handleWithoutVatChange(e.target.value)}
+                  onFocus={(e) => e.target.select()}
+                  enterKeyHint="next"
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      onRequestNextItem?.();
+                    }
+                  }}
+                  style={{
+                    paddingLeft: 26,
+                    borderColor: "rgba(16, 185, 129, 0.45)",
+                    fontWeight: 600,
+                    color: "var(--accent-emerald)",
+                  }}
+                  title="Unit price without VAT (e.g. 100)"
+                />
+              </div>
+              <div className="input-label" style={{ color: "var(--accent-emerald)", fontWeight: 600 }}>
+                Price (No VAT)
+              </div>
+            </div>
 
-        {/* Unit With VAT (13%) - NON-HIGHLIGHTED */}
-        <div className="input-block price-block">
-          <div className="input-with-symbol">
-            <span className="input-symbol">Rs</span>
-            <input
-              className="input"
-              type="number"
-              min="0"
-              step="any"
-              placeholder="0.00"
-              value={withVatDisplay}
-              onChange={(e) => handleWithVatChange(e.target.value)}
-              onFocus={(e) => e.target.select()}
-              style={{ paddingLeft: 26 }}
-              title="Unit price with 13% VAT (e.g. 113)"
-            />
+            {/* Unit With VAT (13%) - NON-HIGHLIGHTED */}
+            <div className="input-block price-block">
+              <div className="input-with-symbol">
+                <span className="input-symbol">Rs</span>
+                <input
+                  className="input"
+                  type="number"
+                  min="0"
+                  step="any"
+                  placeholder="0.00"
+                  value={withVatDisplay}
+                  onChange={(e) => handleWithVatChange(e.target.value)}
+                  onFocus={(e) => e.target.select()}
+                  style={{ paddingLeft: 26 }}
+                  title="Unit price with 13% VAT (e.g. 113)"
+                />
+              </div>
+              <div className="input-label">Unit (13% VAT)</div>
+            </div>
+          </>
+        ) : (
+          /* Non-VAT Bill Mode: Direct Unit Price (HIGHLIGHTED) */
+          <div className="input-block price-block">
+            <div className="input-with-symbol">
+              <span
+                className="input-symbol"
+                style={{ color: "var(--accent-emerald)", fontWeight: 700 }}
+              >
+                Rs
+              </span>
+              <input
+                ref={priceInputRef}
+                className="input price-highlight-input"
+                type="number"
+                min="0"
+                step="any"
+                placeholder="0.00"
+                value={nonVatPriceDisplay}
+                onChange={(e) => handleNonVatPriceChange(e.target.value)}
+                onFocus={(e) => e.target.select()}
+                enterKeyHint="next"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    onRequestNextItem?.();
+                  }
+                }}
+                style={{
+                  paddingLeft: 26,
+                  borderColor: "rgba(16, 185, 129, 0.45)",
+                  fontWeight: 600,
+                  color: "var(--accent-emerald)",
+                }}
+                title="Direct Unit Price (No VAT)"
+              />
+            </div>
+            <div className="input-label" style={{ color: "var(--accent-emerald)", fontWeight: 600 }}>
+              Price / Unit
+            </div>
           </div>
-          <div className="input-label">Unit (13% VAT)</div>
-        </div>
+        )}
 
         {/* Total Actual Price - NON-HIGHLIGHTED */}
         <div className="input-block price-block total-price-block">
@@ -332,43 +442,52 @@ export function ItemRow({
               Split with:
             </span>
 
-            {/* Internal Friend Assignment Operations */}
+            {/* Clear 2-State Segmented Control (Equal vs Custom) + Quick Actions */}
             <div className="item-assignment-actions">
-              <button
-                type="button"
-                className={`btn btn-sm ${showCustomPortions ? "btn-primary" : "btn-ghost"}`}
-                onClick={() => {
-                  const next = !showCustomPortions;
-                  setShowCustomPortions(next);
-                  if (!next) {
-                    const equalShares = distributeEqualShares(
-                      item.shares,
-                      item.totalQty,
-                    );
-                    onChange({ ...item, shares: equalShares });
-                  }
-                }}
-                title={
-                  showCustomPortions
-                    ? "Reset to equal split (Total Qty ÷ Number of friends)"
-                    : "Enter custom portion points (e.g. 0.5, 1.5)"
-                }
-              >
-                {showCustomPortions ? "Equal split" : "Custom portions"}
-              </button>
+              {/* Segmented Control */}
+              <div className="item-mode-segmented">
+                <button
+                  type="button"
+                  className={`item-mode-btn ${!showCustomPortions ? "active" : ""}`}
+                  onClick={() => {
+                    if (showCustomPortions) {
+                      setShowCustomPortions(false);
+                      const equalShares = distributeEqualShares(
+                        item.shares,
+                        item.totalQty,
+                      );
+                      setRawInputs({});
+                      onChange({ ...item, shares: equalShares });
+                    }
+                  }}
+                  title="Split quantity equally among selected friends"
+                >
+                  Equal
+                </button>
+                <button
+                  type="button"
+                  className={`item-mode-btn ${showCustomPortions ? "active" : ""}`}
+                  onClick={() => {
+                    if (!showCustomPortions) {
+                      setShowCustomPortions(true);
+                    }
+                  }}
+                  title="Enter custom portion decimals/points for each friend"
+                >
+                  Custom
+                </button>
+              </div>
 
               <button
                 type="button"
                 className="btn btn-ghost btn-sm"
                 onClick={() => {
-                  const allShares = friends.map((f) => ({
-                    friendId: f.id,
-                    qty: 1,
-                  }));
-                  const equalShares = showCustomPortions
-                    ? allShares
-                    : distributeEqualShares(allShares, item.totalQty);
-                  onChange({ ...item, shares: equalShares });
+                  const allShares = distributeEqualShares(
+                    friends.map((f) => ({ friendId: f.id, qty: 1 })),
+                    item.totalQty,
+                  );
+                  setRawInputs({});
+                  onChange({ ...item, shares: allShares });
                 }}
                 title="Assign all friends to this item"
               >
@@ -379,7 +498,10 @@ export function ItemRow({
                 <button
                   type="button"
                   className="btn btn-ghost btn-sm"
-                  onClick={() => onChange({ ...item, shares: [] })}
+                  onClick={() => {
+                    setRawInputs({});
+                    onChange({ ...item, shares: [] });
+                  }}
                   title="Clear friend assignments"
                 >
                   Clear
@@ -388,8 +510,8 @@ export function ItemRow({
             </div>
           </div>
 
-          {/* 2-Column Friend Pills Grid */}
-          <div className="friend-pills-grid">
+          {/* Friend Pills Grid (5-col in Equal mode, 4-col in Custom mode on wide screens) */}
+          <div className={`friend-pills-grid ${showCustomPortions ? "custom-mode" : "equal-mode"}`}>
             {friends.map((f) => {
               const share = item.shares.find((s) => s.friendId === f.id);
               const checked = Boolean(share);

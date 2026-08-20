@@ -41,7 +41,9 @@ export function ExportModal({
           </button>
         </div>
 
-        <div style={{ fontSize: 13, color: "var(--text-muted)", marginBottom: 16 }}>
+        <div
+          style={{ fontSize: 13, color: "var(--text-muted)", marginBottom: 16 }}
+        >
           Choose a format to download and share with your friends:
         </div>
 
@@ -64,18 +66,28 @@ export function ExportModal({
             }}
             style={{
               opacity: friendsCount === 0 ? 0.6 : 1,
-              cursor: friendsCount === 0 || exporting ? "not-allowed" : "pointer",
+              cursor:
+                friendsCount === 0 || exporting ? "not-allowed" : "pointer",
             }}
           >
-            <div className="export-choice-icon" style={{ background: "rgba(245, 158, 11, 0.15)", color: "var(--accent-amber)" }}>
+            <div
+              className="export-choice-icon"
+              style={{
+                background: "rgba(245, 158, 11, 0.15)",
+                color: "var(--accent-amber)",
+              }}
+            >
               📄
             </div>
             <div style={{ flex: 1 }}>
-              <div style={{ fontWeight: 700, fontSize: 14.5, color: "var(--text-primary)" }}>
-                PDF Document (.pdf)
-              </div>
-              <div style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 2 }}>
-                Printable itemized receipt with who owes what and total summary
+              <div
+                style={{
+                  fontWeight: 700,
+                  fontSize: 14.5,
+                  color: "var(--text-primary)",
+                }}
+              >
+                PDF Document
               </div>
             </div>
             <button
@@ -103,18 +115,28 @@ export function ExportModal({
             }}
             style={{
               opacity: friendsCount === 0 ? 0.6 : 1,
-              cursor: friendsCount === 0 || exporting ? "not-allowed" : "pointer",
+              cursor:
+                friendsCount === 0 || exporting ? "not-allowed" : "pointer",
             }}
           >
-            <div className="export-choice-icon" style={{ background: "rgba(20, 184, 166, 0.15)", color: "var(--accent-teal-light)" }}>
+            <div
+              className="export-choice-icon"
+              style={{
+                background: "rgba(20, 184, 166, 0.15)",
+                color: "var(--accent-teal-light)",
+              }}
+            >
               🖼️
             </div>
             <div style={{ flex: 1 }}>
-              <div style={{ fontWeight: 700, fontSize: 14.5, color: "var(--text-primary)" }}>
-                PNG Image (.png)
-              </div>
-              <div style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 2 }}>
-                High-resolution picture ideal for sharing on WhatsApp or Messenger
+              <div
+                style={{
+                  fontWeight: 700,
+                  fontSize: 14.5,
+                  color: "var(--text-primary)",
+                }}
+              >
+                PNG Image
               </div>
             </div>
             <button

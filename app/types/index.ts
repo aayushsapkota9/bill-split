@@ -14,9 +14,10 @@ export interface ItemShare {
 export interface BillItem {
   id: string;
   name: string;
-  price: number; // Unit price without VAT
+  price: number; // Unit final price with VAT (or flat price if non-VAT)
   totalQty: number;
   shares: ItemShare[];
+  hasVat?: boolean; // true = 13% VAT, false = Non-VAT (default true)
 }
 
 export interface FeeConfig {
@@ -30,6 +31,7 @@ export interface SavedBill {
   date: string;
   friends: Friend[];
   items: BillItem[];
+  isVatBill?: boolean;
   flatFee: FeeConfig;
   discount: FeeConfig;
   tax: FeeConfig;
