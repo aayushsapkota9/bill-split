@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { BillItem, Friend, ItemShare } from "../types";
 import { uid } from "../lib/utils";
+import { SplitItemModal } from "./SplitItemModal";
 
 export interface ItemRowProps {
   item: BillItem;
@@ -11,6 +12,16 @@ export interface ItemRowProps {
   onSplitIntoIndividuals: (items: BillItem[]) => void;
 }
 
+function distributeEqualShares(
+  shares: ItemShare[],
+  totalQty: number,
+): ItemShare[] {
+  if (shares.length === 0) return [];
+  const qty = totalQty > 0 ? totalQty : 1;
+  const each = Math.round((qty / shares.length) * 100) / 100;
+  return shares.map((s) => ({ ...s, qty: each }));
+}
+
 export function ItemRow({
   item,
   friends,
@@ -19,25 +30,22 @@ export function ItemRow({
   onDuplicate,
   onSplitIntoIndividuals,
 }: ItemRowProps) {
-  const [showFractions, setShowFractions] = useState<boolean>(() =>
-    item.shares.some((s) => s.qty !== 1),
-  );
+  const [showCustomPortions, setShowCustomPortions] = useState<boolean>(() => {
+    if (item.shares.length <= 1) return false;
+    const firstQty = item.shares[0]?.qty;
+    return item.shares.some((s) => s.qty !== firstQty);
+  });
+  const [showSplitModal, setShowSplitModal] = useState(false);
+  const [rawInputs, setRawInputs] = useState<Record<string, string>>({});
 
-  useEffect(() => {
-    if (item.shares.some((s) => s.qty !== 1)) {
-      setShowFractions(true);
-    }
-  }, [item.shares]);
-
-  const canSplit = item.totalQty >= 2 && Number.isInteger(item.totalQty);
-
-  function handleSplit() {
-    const n = Math.round(item.totalQty);
-    const newItems: BillItem[] = Array.from({ length: n }, (_, i) => ({
+  function handleSplitConfirm(pieces: number) {
+    const qtyPerPiece =
+      item.totalQty > 0 ? Math.round((item.totalQty / pieces) * 100) / 100 : 1;
+    const newItems: BillItem[] = Array.from({ length: pieces }, (_, i) => ({
       id: uid(),
       name: `${item.name || "Item"} ${i + 1}`,
       price: item.price,
-      totalQty: 1,
+      totalQty: qtyPerPiece,
       shares: [],
     }));
     onSplitIntoIndividuals(newItems);
@@ -45,7 +53,11 @@ export function ItemRow({
 
   const assignedTotal = item.shares.reduce((s, sh) => s + sh.qty, 0);
   const diff = Math.abs(assignedTotal - (item.totalQty || 0));
-  const mismatch = diff > 0.05 && item.totalQty > 0 && item.shares.length > 0;
+  const mismatch =
+    showCustomPortions &&
+    diff > 0.05 &&
+    item.totalQty > 0 &&
+    item.shares.length > 0;
 
   function toggleFriend(fid: string) {
     const existing = item.shares.find((s) => s.friendId === fid);
@@ -53,17 +65,19 @@ export function ItemRow({
     if (existing) {
       newShares = item.shares.filter((s) => s.friendId !== fid);
     } else {
-      const defaultQty =
-        showFractions && item.totalQty > 0
-          ? Math.round((item.totalQty / (item.shares.length + 1)) * 100) / 100
-          : 1;
-      newShares = [...item.shares, { friendId: fid, qty: defaultQty }];
+      newShares = [...item.shares, { friendId: fid, qty: 1 }];
+    }
+
+    if (!showCustomPortions) {
+      newShares = distributeEqualShares(newShares, item.totalQty);
     }
     onChange({ ...item, shares: newShares });
   }
 
-  function updateQty(fid: string, val: string) {
-    if (val === "") {
+  function handleQtyInputChange(fid: string, val: string) {
+    setRawInputs((prev) => ({ ...prev, [fid]: val }));
+
+    if (val === "" || val === ".") {
       onChange({
         ...item,
         shares: item.shares.map((s) =>
@@ -83,6 +97,14 @@ export function ItemRow({
     }
   }
 
+  function handleQtyBlur(fid: string) {
+    setRawInputs((prev) => {
+      const next = { ...prev };
+      delete next[fid];
+      return next;
+    });
+  }
+
   function updateField(field: "name" | "totalQty", val: string) {
     if (field === "name") {
       onChange({ ...item, name: val });
@@ -93,7 +115,11 @@ export function ItemRow({
       }
       const newQty = parseFloat(val);
       if (!isNaN(newQty)) {
-        onChange({ ...item, totalQty: newQty });
+        let updatedShares = item.shares;
+        if (!showCustomPortions && item.shares.length > 0) {
+          updatedShares = distributeEqualShares(item.shares, newQty);
+        }
+        onChange({ ...item, totalQty: newQty, shares: updatedShares });
       }
     }
   }
@@ -148,7 +174,7 @@ export function ItemRow({
 
   return (
     <div className="item-row">
-      {/* Top Bar: Name & Delete */}
+      {/* Top Header: Name & Row Lifecycle Actions (Duplicate, Split, Delete) */}
       <div className="item-header-row">
         <div className="item-name-wrap">
           <input
@@ -160,58 +186,65 @@ export function ItemRow({
           <div className="input-label">item name</div>
         </div>
 
-        <button
-          type="button"
-          className="btn btn-danger item-delete-btn"
-          onClick={onRemove}
-          title="Remove item"
-          aria-label="Remove item"
-        >
-          <svg
-            width="14"
-            height="14"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2.5"
+        {/* Row Operations */}
+        <div className="item-row-actions">
+          <button
+            type="button"
+            className="btn btn-ghost btn-sm"
+            onClick={onDuplicate}
+            title="Duplicate this item row"
           >
-            <line x1="18" y1="6" x2="6" y2="18" />
-            <line x1="6" y1="6" x2="18" y2="18" />
-          </svg>
-        </button>
+            Duplicate
+          </button>
+          <button
+            type="button"
+            className="btn btn-ghost btn-sm"
+            onClick={() => setShowSplitModal(true)}
+            title="Split this item row into multiple rows"
+          >
+            Split...
+          </button>
+          <button
+            type="button"
+            className="btn btn-danger item-delete-btn"
+            onClick={onRemove}
+            title="Remove item"
+            aria-label="Remove item"
+          >
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.5"
+            >
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+          </button>
+        </div>
       </div>
 
       {/* Numeric Inputs Grid */}
       <div className="item-numeric-grid">
         {/* Total Qty - HIGHLIGHTED */}
         <div className="input-block qty-block">
-          <div className="qty-input-group">
-            <input
-              className="input qty-highlight-input"
-              type="number"
-              min="0"
-              step="any"
-              placeholder="Qty"
-              value={item.totalQty || ""}
-              onChange={(e) => updateField("totalQty", e.target.value)}
-              onFocus={(e) => e.target.select()}
-              title="Total servings/quantity of this item"
-              style={{
-                borderColor: "rgba(245, 158, 11, 0.45)",
-                fontWeight: 600,
-              }}
-            />
-            {canSplit && (
-              <button
-                type="button"
-                className="btn btn-ghost split-x-btn"
-                onClick={handleSplit}
-                title={`Split into ${Math.round(item.totalQty)} individual items`}
-              >
-                Split x{Math.round(item.totalQty)}
-              </button>
-            )}
-          </div>
+          <input
+            className="input qty-highlight-input"
+            type="number"
+            min="0"
+            step="any"
+            placeholder="Qty"
+            value={item.totalQty || ""}
+            onChange={(e) => updateField("totalQty", e.target.value)}
+            onFocus={(e) => e.target.select()}
+            title="Total servings/quantity of this item"
+            style={{
+              borderColor: "rgba(245, 158, 11, 0.45)",
+              fontWeight: 600,
+            }}
+          />
           <div className="input-label" style={{ color: "var(--accent-amber)", fontWeight: 600 }}>
             qty
           </div>
@@ -290,137 +323,56 @@ export function ItemRow({
         </div>
       </div>
 
-      {/* Friends Assignment Pills */}
+      {/* Friends Assignment Section */}
       {friends.length > 0 && (
         <div className="item-friends-section">
-          <div className="friend-pills-wrap">
-            {friends.map((f) => {
-              const share = item.shares.find((s) => s.friendId === f.id);
-              const checked = Boolean(share);
-              return (
-                <div key={f.id} className="friend-pill-container">
-                  <button
-                    type="button"
-                    className={`friend-pill-btn ${checked ? "checked" : ""}`}
-                    onClick={() => toggleFriend(f.id)}
-                  >
-                    <span>{f.name}</span>
-                    <span className={`pill-checkbox ${checked ? "checked" : ""}`} />
-                  </button>
-                  {checked && showFractions && (
-                    <input
-                      className="qty-input"
-                      type="text"
-                      inputMode="decimal"
-                      value={
-                        share?.qty !== undefined && share?.qty !== null
-                          ? String(Number(share.qty.toFixed(2)))
-                          : ""
-                      }
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        if (/^[0-9]*\.?[0-9]*$/.test(val)) {
-                          updateQty(f.id, val);
-                        }
-                      }}
-                      onFocus={(e) => e.target.select()}
-                      onClick={(e) => e.stopPropagation()}
-                      title={`How many did ${f.name} have? (e.g. 0.5, 1, 2)`}
-                      placeholder="0"
-                      style={{ width: 56 }}
-                    />
-                  )}
-                </div>
-              );
-            })}
-          </div>
+          {/* Internal Friends Operations Header */}
+          <div className="item-friends-header">
+            <span className="item-friends-title">
+              Split with:
+            </span>
 
-          {showFractions && mismatch && (
-            <div className="warning-banner">
-              Assigned {assignedTotal.toFixed(2)} but item total is{" "}
-              {item.totalQty}. Difference:{" "}
-              {assignedTotal - item.totalQty > 0 ? "+" : ""}
-              {(assignedTotal - item.totalQty).toFixed(2)}
-            </div>
-          )}
+            {/* Internal Friend Assignment Operations */}
+            <div className="item-assignment-actions">
+              <button
+                type="button"
+                className={`btn btn-sm ${showCustomPortions ? "btn-primary" : "btn-ghost"}`}
+                onClick={() => {
+                  const next = !showCustomPortions;
+                  setShowCustomPortions(next);
+                  if (!next) {
+                    const equalShares = distributeEqualShares(
+                      item.shares,
+                      item.totalQty,
+                    );
+                    onChange({ ...item, shares: equalShares });
+                  }
+                }}
+                title={
+                  showCustomPortions
+                    ? "Reset to equal split (Total Qty ÷ Number of friends)"
+                    : "Enter custom portion points (e.g. 0.5, 1.5)"
+                }
+              >
+                {showCustomPortions ? "Equal split" : "Custom portions"}
+              </button>
 
-          {/* Bottom actions toolbar */}
-          <div className="item-bottom-toolbar">
-            <div>
               <button
                 type="button"
                 className="btn btn-ghost btn-sm"
-                onClick={onDuplicate}
-                title="Duplicate this item"
-              >
-                Duplicate
-              </button>
-            </div>
-
-            <div className="item-toolbar-actions">
-              <button
-                type="button"
-                className={`btn btn-sm ${showFractions ? "btn-primary" : "btn-ghost"}`}
                 onClick={() => {
-                  const next = !showFractions;
-                  setShowFractions(next);
-                  if (next) {
-                    if (item.shares.length > 0) {
-                      const each =
-                        Math.round(
-                          ((item.totalQty || 1) / item.shares.length) * 100,
-                        ) / 100;
-                      onChange({
-                        ...item,
-                        shares: item.shares.map((s) => ({ ...s, qty: each })),
-                      });
-                    }
-                  } else {
-                    onChange({
-                      ...item,
-                      shares: item.shares.map((s) => ({ ...s, qty: 1 })),
-                    });
-                  }
+                  const allShares = friends.map((f) => ({
+                    friendId: f.id,
+                    qty: 1,
+                  }));
+                  const equalShares = showCustomPortions
+                    ? allShares
+                    : distributeEqualShares(allShares, item.totalQty);
+                  onChange({ ...item, shares: equalShares });
                 }}
+                title="Assign all friends to this item"
               >
-                {showFractions ? "Standard split" : "Assign quantities"}
-              </button>
-
-              {showFractions && item.shares.length > 0 && (
-                <button
-                  type="button"
-                  className="btn btn-ghost btn-sm"
-                  onClick={() => {
-                    const each =
-                      Math.round(
-                        ((item.totalQty || 1) / item.shares.length) * 100,
-                      ) / 100;
-                    onChange({
-                      ...item,
-                      shares: item.shares.map((s) => ({ ...s, qty: each })),
-                    });
-                  }}
-                  title="Distribute item quantity evenly among selected friends"
-                >
-                  Split evenly
-                </button>
-              )}
-
-              <button
-                type="button"
-                className="btn btn-amber btn-sm"
-                onClick={() => {
-                  const each =
-                    showFractions && friends.length > 0
-                      ? Math.round(((item.totalQty || 1) / friends.length) * 100) / 100
-                      : 1;
-                  onChange({
-                    ...item,
-                    shares: friends.map((f) => ({ friendId: f.id, qty: each })),
-                  });
-                }}
-              >
-                Add all
+                Select all
               </button>
 
               {item.shares.length > 0 && (
@@ -428,14 +380,81 @@ export function ItemRow({
                   type="button"
                   className="btn btn-ghost btn-sm"
                   onClick={() => onChange({ ...item, shares: [] })}
+                  title="Clear friend assignments"
                 >
-                  Remove all
+                  Clear
                 </button>
               )}
             </div>
           </div>
+
+          {/* 2-Column Friend Pills Grid */}
+          <div className="friend-pills-grid">
+            {friends.map((f) => {
+              const share = item.shares.find((s) => s.friendId === f.id);
+              const checked = Boolean(share);
+              const inputValue =
+                rawInputs[f.id] !== undefined
+                  ? rawInputs[f.id]
+                  : share?.qty !== undefined && share?.qty !== null
+                    ? String(Number(share.qty.toFixed(2)))
+                    : "";
+
+              return (
+                <div key={f.id} className="friend-pill-container">
+                  <button
+                    type="button"
+                    className={`friend-pill-btn ${checked ? "checked" : ""}`}
+                    onClick={() => toggleFriend(f.id)}
+                    title={f.name}
+                  >
+                    <span className="friend-pill-name">{f.name}</span>
+                    <span className={`pill-checkbox ${checked ? "checked" : ""}`} />
+                  </button>
+                  {checked && showCustomPortions && (
+                    <input
+                      className="qty-input"
+                      type="text"
+                      inputMode="decimal"
+                      value={inputValue}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        if (/^[0-9]*\.?[0-9]*$/.test(val)) {
+                          handleQtyInputChange(f.id, val);
+                        }
+                      }}
+                      onBlur={() => handleQtyBlur(f.id)}
+                      onFocus={(e) => e.target.select()}
+                      onClick={(e) => e.stopPropagation()}
+                      title={`Portion for ${f.name}`}
+                      placeholder="0"
+                    />
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
+          {mismatch && (
+            <div className="warning-banner">
+              Assigned {assignedTotal.toFixed(2)} but item total is{" "}
+              {item.totalQty}. Difference:{" "}
+              {assignedTotal - item.totalQty > 0 ? "+" : ""}
+              {(assignedTotal - item.totalQty).toFixed(2)}
+            </div>
+          )}
         </div>
       )}
+
+      {/* Split Item Modal */}
+      <SplitItemModal
+        isOpen={showSplitModal}
+        onClose={() => setShowSplitModal(false)}
+        itemName={item.name}
+        totalQty={item.totalQty}
+        price={item.price}
+        onConfirmSplit={handleSplitConfirm}
+      />
 
       {friends.length === 0 && (
         <div style={{ marginTop: 8, fontSize: 12, color: "var(--text-muted)" }}>

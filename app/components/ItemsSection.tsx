@@ -25,25 +25,6 @@ export function ItemsSection({
             {items.length}
           </span>
         </h2>
-        <button
-          type="button"
-          className="btn btn-primary"
-          onClick={onAddItem}
-          id="add-item-btn"
-        >
-          <svg
-            width="14"
-            height="14"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2.5"
-          >
-            <line x1="12" y1="5" x2="12" y2="19" />
-            <line x1="5" y1="12" x2="19" y2="12" />
-          </svg>
-          Add Item
-        </button>
       </div>
 
       {items.length === 0 && (
@@ -51,7 +32,7 @@ export function ItemsSection({
           <div style={{ fontSize: 36, marginBottom: 10 }}>📋</div>
           <div style={{ fontSize: 15, fontWeight: 500 }}>No items yet</div>
           <div style={{ fontSize: 13, marginTop: 4 }}>
-            Click &quot;Add Item&quot; to start
+            Click &quot;+ Add Item&quot; below to start
           </div>
         </div>
       )}
@@ -98,6 +79,7 @@ export function ItemsSection({
         type="button"
         className="btn btn-ghost add-item-dashed-btn"
         onClick={onAddItem}
+        id="add-item-btn"
       >
         <svg
           width="14"
@@ -110,7 +92,7 @@ export function ItemsSection({
           <line x1="12" y1="5" x2="12" y2="19" />
           <line x1="5" y1="12" x2="19" y2="12" />
         </svg>
-        Add Another Item
+        + Add Item
       </button>
     </section>
   );

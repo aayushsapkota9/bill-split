@@ -3,7 +3,9 @@ import { FeeConfig } from "../types";
 import { formatCurrency } from "../lib/utils";
 import { FeeRow } from "./FeeRow";
 
-interface BillTotalsCardProps {
+interface FeesModalProps {
+  isOpen: boolean;
+  onClose: () => void;
   itemsCount: number;
   subtotal: number;
   flatFee: FeeConfig;
@@ -19,11 +21,11 @@ interface BillTotalsCardProps {
   discountAmount: number;
   tipAmount: number;
   grandTotal: number;
-  hasFriends: boolean;
-  onOpenExportModal: () => void;
 }
 
-export function BillTotalsCard({
+export function FeesModal({
+  isOpen,
+  onClose,
   itemsCount,
   subtotal,
   flatFee,
@@ -39,16 +41,31 @@ export function BillTotalsCard({
   discountAmount,
   tipAmount,
   grandTotal,
-  hasFriends,
-  onOpenExportModal,
-}: BillTotalsCardProps) {
-  return (
-    <aside className="summary-sidebar">
-      <div className="card bill-totals-card">
-        <h3 className="section-title" style={{ marginBottom: 14, fontSize: 15 }}>
-          <span style={{ fontSize: 17 }}>🧮</span> Bill Totals
-        </h3>
+}: FeesModalProps) {
+  if (!isOpen) return null;
 
+  return (
+    <div className="modal-backdrop" onClick={onClose}>
+      <div
+        className="modal-content fees-modal-content"
+        style={{ maxWidth: 440 }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="modal-header">
+          <h2 className="modal-title">
+            <span>🧮</span> Fees, Tax &amp; Breakdown
+          </h2>
+          <button
+            type="button"
+            className="btn btn-ghost"
+            onClick={onClose}
+            style={{ padding: "4px 8px" }}
+          >
+            ✕
+          </button>
+        </div>
+
+        {/* Subtotal */}
         <div className="total-row">
           <span style={{ color: "var(--text-secondary)", fontSize: 13 }}>
             Subtotal ({itemsCount} items)
@@ -56,13 +73,14 @@ export function BillTotalsCard({
           <span className="total-amount">{formatCurrency(subtotal)}</span>
         </div>
 
+        {/* Fee rows */}
         <FeeRow label="Flat Fees" config={flatFee} onChange={setFlatFee} />
         <FeeRow label="Tax" config={tax} onChange={setTax} />
         <FeeRow label="Discount" config={discount} onChange={setDiscount} />
         <FeeRow label="Tip" config={tip} onChange={setTip} />
 
         {/* Arithmetic Breakdown */}
-        <div className="bill-breakdown-box">
+        <div className="bill-breakdown-box" style={{ marginTop: 14 }}>
           <div className="breakdown-row">
             <span>Subtotal</span>
             <span>{formatCurrency(subtotal)}</span>
@@ -103,24 +121,23 @@ export function BillTotalsCard({
           )}
         </div>
 
-        <div className="grand-total-row">
+        {/* Grand Total Row */}
+        <div className="grand-total-row" style={{ marginBottom: 16 }}>
           <span>Grand Total</span>
           <span className="grand-total-amount">
             {formatCurrency(grandTotal)}
           </span>
         </div>
-      </div>
 
-      <button
-        type="button"
-        className="btn btn-primary"
-        onClick={onOpenExportModal}
-        disabled={!hasFriends}
-        style={{ width: "100%", justifyContent: "center", padding: "10px 14px", fontSize: 13.5 }}
-        title="Export bill as PDF or PNG Image"
-      >
-        📤 Export / Share Bill
-      </button>
-    </aside>
+        <button
+          type="button"
+          className="btn btn-primary"
+          onClick={onClose}
+          style={{ width: "100%", justifyContent: "center", padding: "9px 14px" }}
+        >
+          Done
+        </button>
+      </div>
+    </div>
   );
 }

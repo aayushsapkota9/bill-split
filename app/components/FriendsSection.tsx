@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useRef } from "react";
 import { BillItem, Friend } from "../types";
 import { formatCurrency, formatShareText, personItemCost } from "../lib/utils";
 
@@ -21,6 +21,30 @@ export function FriendsSection({
   onAddFriend,
   onRemoveFriend,
 }: FriendsSectionProps) {
+  const [hasError, setHasError] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  function handleAdd() {
+    if (!newFriendName.trim()) {
+      setHasError(true);
+      inputRef.current?.focus();
+      return;
+    }
+    setHasError(false);
+    onAddFriend();
+  }
+
+  function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (e.key === "Enter") {
+      handleAdd();
+    }
+  }
+
+  function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
+    if (hasError) setHasError(false);
+    setNewFriendName(e.target.value);
+  }
+
   return (
     <aside className="friends-sidebar" style={{ width: "100%" }}>
       <div className="section-header">
@@ -35,18 +59,19 @@ export function FriendsSection({
       {/* Add Friend Form */}
       <div className="add-friend-form" style={{ width: "100%" }}>
         <input
+          ref={inputRef}
           id="add-friend-input"
-          className="input"
-          placeholder="Friend's name..."
+          className={`input ${hasError ? "input-error" : ""}`}
+          placeholder={hasError ? "Please enter a name first!" : "Friend's name..."}
           value={newFriendName}
-          onChange={(e) => setNewFriendName(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && onAddFriend()}
+          onChange={handleChange}
+          onKeyDown={handleKeyDown}
           style={{ flex: 1 }}
         />
         <button
           type="button"
           className="btn btn-primary add-friend-btn"
-          onClick={onAddFriend}
+          onClick={handleAdd}
           id="add-friend-btn"
           title="Add Friend"
         >

@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useRef } from "react";
 import { SavedBill } from "../types";
 import { formatCurrency } from "../lib/utils";
 
@@ -8,9 +8,9 @@ interface HistoryModalProps {
   onClose: () => void;
   onLoadBill: (bill: SavedBill) => void;
   onDeleteBill: (id: string) => void;
-  onExportSavedBillJson: (bill: SavedBill) => void;
-  onExportAllSavedBillsJson: () => void;
-  onOpenImportJson: () => void;
+  onExportBackupJson: () => void;
+  onImportBackupJson: (parsed: unknown) => void;
+  onError: (msg: string) => void;
 }
 
 export function HistoryModal({
@@ -19,39 +19,63 @@ export function HistoryModal({
   onClose,
   onLoadBill,
   onDeleteBill,
-  onExportSavedBillJson,
-  onExportAllSavedBillsJson,
-  onOpenImportJson,
+  onExportBackupJson,
+  onImportBackupJson,
+  onError,
 }: HistoryModalProps) {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   if (!isOpen) return null;
+
+  function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const parsed = JSON.parse(event.target?.result as string);
+        onImportBackupJson(parsed);
+      } catch (err) {
+        onError(
+          "Invalid backup file: " +
+            (err instanceof Error ? err.message : "Parse error"),
+        );
+      }
+    };
+    reader.readAsText(file);
+    if (e.target) e.target.value = "";
+  }
 
   return (
     <div className="modal-backdrop" onClick={onClose}>
       <div className="modal-content" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <h2 className="modal-title">
-            📜 Saved Bills History
+            <span>📜</span> Saved Bills History
           </h2>
           <div className="modal-header-actions">
-            {savedBills.length > 0 && (
-              <button
-                type="button"
-                className="btn btn-ghost"
-                onClick={onExportAllSavedBillsJson}
-                style={{ padding: "4px 10px", fontSize: 12 }}
-                title="Export all saved bills as JSON"
-              >
-                Export All JSON
-              </button>
-            )}
+            <input
+              type="file"
+              ref={fileInputRef}
+              accept=".json,application/json"
+              style={{ display: "none" }}
+              onChange={handleFileSelect}
+            />
             <button
               type="button"
-              className="btn btn-ghost"
-              onClick={onOpenImportJson}
-              style={{ padding: "4px 10px", fontSize: 12 }}
-              title="Import bills from JSON"
+              className="btn btn-ghost btn-sm"
+              onClick={() => fileInputRef.current?.click()}
+              title="Import bills and drafts from JSON backup"
             >
-              Import JSON
+              📥 Import All
+            </button>
+            <button
+              type="button"
+              className="btn btn-ghost btn-sm"
+              onClick={onExportBackupJson}
+              title="Export complete backup as JSON"
+            >
+              📤 Export All
             </button>
             <button
               type="button"
@@ -67,10 +91,9 @@ export function HistoryModal({
         {savedBills.length === 0 ? (
           <div className="modal-empty-state">
             <div style={{ fontSize: 32, marginBottom: 8 }}>💾</div>
-            <div style={{ fontWeight: 500 }}>No saved bills yet</div>
-            <div style={{ fontSize: 13, marginTop: 4 }}>
-              Click &quot;Save Bill&quot; in the header to save the current
-              bill for future reference.
+            <div style={{ fontWeight: 500, color: "var(--text-primary)" }}>No saved bills yet</div>
+            <div style={{ fontSize: 13, marginTop: 4, color: "var(--text-muted)" }}>
+              Click the save icon 💾 in the header to store snapshots of your bills.
             </div>
           </div>
         ) : (
@@ -82,8 +105,8 @@ export function HistoryModal({
                     {bill.title}
                   </div>
                   <div className="history-bill-meta">
-                    {bill.date} • {bill.friends.length} friends •{" "}
-                    {bill.items.length} items
+                    {bill.date} • {bill.friends.length} {bill.friends.length === 1 ? "friend" : "friends"} •{" "}
+                    {bill.items.length} {bill.items.length === 1 ? "item" : "items"}
                   </div>
                   <div className="history-bill-total">
                     Total: {formatCurrency(bill.grandTotal)}
@@ -92,30 +115,8 @@ export function HistoryModal({
                 <div className="history-bill-actions">
                   <button
                     type="button"
-                    className="btn btn-ghost"
-                    onClick={() => onExportSavedBillJson(bill)}
-                    title="Export this bill as JSON"
-                    style={{ padding: "6px 10px", fontSize: 12 }}
-                  >
-                    <svg
-                      width="12"
-                      height="12"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                    >
-                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                      <polyline points="7 10 12 15 17 10" />
-                      <line x1="12" y1="15" x2="12" y2="3" />
-                    </svg>
-                    JSON
-                  </button>
-                  <button
-                    type="button"
-                    className="btn btn-primary"
+                    className="btn btn-primary btn-sm"
                     onClick={() => onLoadBill(bill)}
-                    style={{ padding: "6px 12px", fontSize: 13 }}
                   >
                     Load
                   </button>
@@ -124,6 +125,7 @@ export function HistoryModal({
                     className="btn btn-danger"
                     onClick={() => onDeleteBill(bill.id)}
                     title="Delete bill"
+                    aria-label="Delete bill"
                   >
                     <svg
                       width="14"
